@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "289343347265",
+    "project_id": "physic-lab-app",
+    "storage_bucket": "physic-lab-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:289343347265:android:d9ba6a16881aeef2b984c0",
+        "android_client_info": {
+          "package_name": "com.example.physic_lab_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBLSyrucMjXGkv_I3h-QGNm0Ekk9PxtZwo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:289343347265:android:e2ce8d4192f941b4b984c0",
+        "android_client_info": {
+          "package_name": "com.mtsn1sby.physicLabApp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBLSyrucMjXGkv_I3h-QGNm0Ekk9PxtZwo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
