@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:physic_lab_app/screens/modules/electricity/dynamic/experiment/experimen_canvas_seri.dart';
 import 'experiment/experimen_canvas.dart';
+import 'experiment/experimen_canvas_seri.dart';
 // import 'module_listrik_seri_screen.dart';
 // import 'module_listrik_paralel_screen.dart';
 
@@ -110,7 +112,7 @@ class _StaticLabMenuState extends State<StaticLabMenu>
                       icon: Icons.linear_scale,
                       color1: Colors.blueAccent,
                       color2: Colors.lightBlue,
-                      page: const ExperimenCanvas(target: null),
+                      page: const ExperimenCanvasSeri(target: null),
                       delay: 0,
                     ),
                     _buildExperimentCard(

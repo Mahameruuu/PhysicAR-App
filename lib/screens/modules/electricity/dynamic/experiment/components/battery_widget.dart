@@ -1,5 +1,3 @@
-// lib/screens/modules/electricity/dynamic/experiment/components/battery_widget.dart
-
 import 'package:flutter/material.dart';
 
 class BatteryWidget extends StatelessWidget {
@@ -7,44 +5,93 @@ class BatteryWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Ukuran Baterai
+    const double width = 140;
+    const double height = 60;
+    const double terminalHeight = 25;
+    const double terminalWidth = 8;
+    
     return Container(
-      width: 130,
-      height: 50,
+      width: width,
+      height: height,
+      // Gunakan gradien untuk efek logam/plastik mengkilap
       decoration: BoxDecoration(
-        color: Colors.blueGrey[100],
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.black, width: 2),
+        borderRadius: BorderRadius.circular(15),
+        gradient: LinearGradient(
+          colors: [
+            Colors.blueGrey.shade700,
+            Colors.blueGrey.shade900,
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.5),
+            blurRadius: 10,
+            offset: const Offset(3, 3),
+          ),
+        ],
       ),
-      child: Row(
+      child: Stack(
+        alignment: Alignment.center,
         children: [
+          // Badan utama baterai
           Container(
-            width: 15,
-            height: 50,
-            decoration: const BoxDecoration(
-              color: Colors.red, // Terminal Positif
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(8),
-                bottomLeft: Radius.circular(8),
+            width: width - 20,
+            height: height - 10,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade600,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Center(
+              child: Text(
+                'POWER',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.5
+                ),
               ),
             ),
           ),
-          Expanded(
+          
+          // Terminal Positif (+) - Kanan
+          Positioned(
+            right: 0,
             child: Container(
-              color: Colors.grey[400],
-              child: const Center(
-                child: Text('+ -', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              width: terminalWidth,
+              height: terminalHeight,
+              decoration: BoxDecoration(
+                color: Colors.red.shade700,
+                borderRadius: const BorderRadius.only(
+                  topRight: Radius.circular(5),
+                  bottomRight: Radius.circular(5),
+                ),
+                border: Border.all(color: Colors.yellow.shade700, width: 2),
               ),
+              alignment: Alignment.center,
+              child: const Text('+', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ),
-          Container(
-            width: 15,
-            height: 50,
-            decoration: const BoxDecoration(
-              color: Colors.blue, // Terminal Negatif
-              borderRadius: BorderRadius.only(
-                topRight: Radius.circular(8),
-                bottomRight: Radius.circular(8),
+          
+          // Terminal Negatif (-) - Kiri
+          Positioned(
+            left: 0,
+            child: Container(
+              width: terminalWidth,
+              height: terminalHeight,
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(5),
+                  bottomLeft: Radius.circular(5),
+                ),
+                border: Border.all(color: Colors.yellow.shade700, width: 2),
               ),
+              alignment: Alignment.center,
+              child: const Text('-', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ),
         ],

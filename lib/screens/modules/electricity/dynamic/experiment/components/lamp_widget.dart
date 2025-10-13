@@ -1,5 +1,3 @@
-// lib/screens/modules/electricity/dynamic/experiment/components/lamp_widget.dart
-
 import 'package:flutter/material.dart';
 
 class LampWidget extends StatelessWidget {
@@ -15,47 +13,69 @@ class LampWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color lightColor = isLit
-        ? Color.lerp(Colors.orange[100], Colors.yellow, brightnessFactor)!
+        ? Color.lerp(Colors.orange, Colors.yellow, brightnessFactor)!
         : Colors.grey[300]!;
 
+    // Glow ketika lampu menyala
     final List<BoxShadow> shadows = isLit
         ? [
             BoxShadow(
-              color: lightColor.withOpacity(0.8),
-              blurRadius: 15.0 * brightnessFactor,
-              spreadRadius: 5.0 * brightnessFactor,
+              color: lightColor.withOpacity(0.7),
+              blurRadius: 25.0 * brightnessFactor,
+              spreadRadius: 10.0 * brightnessFactor,
+            ),
+            BoxShadow(
+              color: lightColor.withOpacity(0.3),
+              blurRadius: 50.0 * brightnessFactor,
+              spreadRadius: 20.0 * brightnessFactor,
             ),
           ]
         : [];
 
     return Column(
       children: [
-        // Filamen dan Kaca Lampu (50x60)
+        // Kaca Lampu
         Container(
           width: 50,
-          height: 60,
+          height: 70,
           decoration: BoxDecoration(
-            color: lightColor.withOpacity(0.6),
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.black, width: 1),
+            gradient: isLit
+                ? RadialGradient(
+                    colors: [lightColor.withOpacity(0.9), Colors.transparent],
+                    center: Alignment.topCenter,
+                    radius: 0.8,
+                  )
+                : null,
+            color: isLit ? lightColor.withOpacity(0.6) : Colors.grey[300],
+            border: Border.all(color: Colors.black87, width: 1.5),
             boxShadow: shadows,
           ),
           child: Center(
             child: Container(
-              width: 10,
-              height: 15,
+              width: 12,
+              height: 20,
               decoration: BoxDecoration(
-                color: isLit ? Colors.orange : Colors.grey[700],
-                borderRadius: BorderRadius.circular(2),
+                color: isLit ? Colors.orangeAccent : Colors.grey[600],
+                borderRadius: BorderRadius.circular(3),
               ),
             ),
           ),
         ),
-        // Basis Lampu (50x10)
+        const SizedBox(height: 5),
+        // Basis Lampu
         Container(
-          width: 25,
-          height: 10,
-          color: Colors.grey[700],
+          width: 28,
+          height: 12,
+          decoration: BoxDecoration(
+            color: Colors.grey[700],
+            borderRadius: BorderRadius.circular(6),
+            gradient: LinearGradient(
+              colors: [Colors.grey[800]!, Colors.grey[600]!],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
         ),
       ],
     );

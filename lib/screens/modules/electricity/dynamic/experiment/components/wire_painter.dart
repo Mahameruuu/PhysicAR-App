@@ -1,5 +1,3 @@
-// lib/screens/modules/electricity/dynamic/experiment/components/wire_painter.dart
-
 import 'package:flutter/material.dart';
 
 // --- Model Sederhana untuk Jalur Kawat ---
@@ -20,24 +18,28 @@ extension on WirePath {
   }
 }
 
+// ----------------------------------------------------
+// ABSTRACT: Kelas dasar untuk semua WirePainter
+// ----------------------------------------------------
 abstract class WirePainter extends CustomPainter {
   final bool isSwitchOn;
-  final double animationValue; 
+  final double animationValue;
   final Paint _wirePaint;
   final Paint _electronPaint;
 
   WirePainter({
     required this.isSwitchOn,
     required this.animationValue,
-  }) : _wirePaint = Paint()
+  })  : _wirePaint = Paint()
           ..strokeWidth = 8.0
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round,
         _electronPaint = Paint()
           ..color = Colors.yellowAccent
-          ..style = PaintingStyle.fill;
+          ..style = PaintingStyle.fill
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
 
-  // Metode untuk mendapatkan titik pada path tertentu
+  // Metode bantu untuk menghitung posisi elektron di sepanjang path
   Offset _getPointOnPath(List<Offset> points, double t) {
     if (points.isEmpty) return Offset.zero;
 
@@ -55,7 +57,6 @@ abstract class WirePainter extends CustomPainter {
     for (int i = 0; i < segmentLengths.length; i++) {
       if (currentDistance + segmentLengths[i] >= targetDistance) {
         double segmentFraction = (targetDistance - currentDistance) / segmentLengths[i];
-        // Memastikan tidak mengembalikan null jika Offset.lerp tidak dijalankan
         return Offset.lerp(points[i], points[i + 1], segmentFraction)!;
       }
       currentDistance += segmentLengths[i];
@@ -63,41 +64,39 @@ abstract class WirePainter extends CustomPainter {
     return points.last;
   }
 
-  // Metode untuk menggambar elektron di sepanjang jalur
+  // Menggambar elektron yang bergerak di sepanjang path
   void _drawElectrons(Canvas canvas, WirePath path, int count) {
-    // Menggunakan jalur yang jauh lebih disederhanakan untuk animasi agar terlihat mengalir
     if (!isSwitchOn || path.points.length < 2) return;
 
     for (int i = 0; i < count; i++) {
-      // Elektron mengalir dari positif ke negatif (arah t = 0 ke t = 1)
-      double t = (animationValue + i / count) % 1.0; 
+      double t = (animationValue + i / count) % 1.0;
       final electronPosition = _getPointOnPath(path.points, t);
-      canvas.drawCircle(electronPosition, 3.0, _electronPaint); 
+      canvas.drawCircle(
+        electronPosition,
+        4.0,
+        _electronPaint,
+      );
     }
   }
 
   void drawCircuitPath(Canvas canvas, Size size);
-  WirePath getPath(Size size); // Jalur utama untuk animasi elektron
+  WirePath getPath(Size size);
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Gradient shader untuk efek 3D kabel
+    // Gradient kabel 3D
     _wirePaint.shader = LinearGradient(
-      colors: [Colors.brown.shade700, Colors.black87],
+      colors: isSwitchOn
+          ? [Colors.orange.shade300, Colors.yellow.shade400, Colors.orange.shade700]
+          : [Colors.grey.shade400, Colors.grey.shade500, Colors.grey.shade600],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
 
-    // Menggambar Jalur Kawat (Garis Hitam/Cokelat)
     drawCircuitPath(canvas, size);
 
-    // Menggambar Elektron
     if (isSwitchOn) {
-      // Karena rangkaian paralel, animasi pada satu jalur WirePath
-      // tidak akan merepresentasikan aliran di kedua cabang.
-      // Untuk tujuan demo ini, kita menggunakan jalur komprehensif 
-      // yang dibuat di getPath untuk menunjukkan pergerakan umum.
-      _drawElectrons(canvas, getPath(size), 25); 
+      _drawElectrons(canvas, getPath(size), 25);
     }
   }
 
@@ -105,109 +104,161 @@ abstract class WirePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
     if (oldDelegate is WirePainter) {
       return oldDelegate.isSwitchOn != isSwitchOn ||
-             oldDelegate.animationValue != animationValue;
+          oldDelegate.animationValue != animationValue;
     }
     return true;
   }
 }
 
 // ----------------------------------------------------
-// CustomPainter untuk Rangkaian Paralel yang Disesuaikan
+// CustomPainter untuk Rangkaian Paralel
 // ----------------------------------------------------
 class ParallelCircuitPainter extends WirePainter {
-  ParallelCircuitPainter({required super.isSwitchOn, required super.animationValue});
-
-  // --- Konstanta Koordinat Relatif ---
-  static const double batteryCenterX = 150.0;
-  static const double batteryBottomY = 450.0;
-  static const double junctionYTop = 30.0;
-  static const double junctionYBottom = 380.0; // Titik kumpul negatif utama
-  static const double junctionXLeft = 80.0; // Sisi kiri utama
-  static const double junctionXRight = 320.0; // Sisi kanan utama
-  static const double lamp1Y = 120.0;
-  static const double lamp2Y = 280.0; 
-  static const double lampX = 250.0; // Posisi horizontal lampu
-  static const double switchY = 320.0;
-  static const double switchX = 120.0;
+  ParallelCircuitPainter({
+    required super.isSwitchOn,
+    required super.animationValue,
+  });
 
   @override
   void drawCircuitPath(Canvas canvas, Size size) {
     final path = Path();
 
-    // 1. Jalur Utama Baterai (+) ke Junction Positif Atas
-    path.moveTo(batteryCenterX, batteryBottomY - 25); // Baterai (+)
-    path.lineTo(junctionXRight, batteryBottomY - 25); 
-    path.lineTo(junctionXRight, junctionYTop); 
-    path.lineTo(junctionXLeft, junctionYTop); // Junction Positif Atas
+    final w = size.width;
+    final h = size.height;
 
-    // --- CABANG PARALEL ---
+    // Battery dan junction relatif terhadap ukuran layar
+    final batteryX = w * 0.2;
+    final batteryY = h * 0.8;
+    final junctionTopY = h * 0.1;
+    final junctionBottomY = h * 0.7;
+    final junctionLeftX = w * 0.25;
+    final junctionRightX = w * 0.75;
+    final lampX = w * 0.6;
+    final lamp1Y = h * 0.3;
+    final lamp2Y = h * 0.5;
+    final switchX = w * 0.35;
+    final switchY = h * 0.55;
 
-    // 2. Jalur Cabang Lampu 1 (Atas)
-    // Dimulai dari Junction Positif Atas
-    path.moveTo(junctionXLeft, junctionYTop);
-    path.lineTo(lampX, junctionYTop); // Jalan ke kanan
-    path.lineTo(lampX, lamp1Y); // Masuk Lampu 1
-    path.lineTo(lampX, lamp1Y + 30); // Keluar Lampu 1
+    // Jalur utama dari baterai ke junction atas
+    path.moveTo(batteryX, batteryY);
+    path.lineTo(junctionRightX, batteryY);
+    path.lineTo(junctionRightX, junctionTopY);
+    path.lineTo(junctionLeftX, junctionTopY);
 
-    // Dari Lampu 1 ke Junction Negatif Bawah
-    path.lineTo(junctionXRight, lamp1Y + 30);
-    path.lineTo(junctionXRight, junctionYBottom); // Titik Kumpul Negatif Utama (Akhir Lampu 1)
-    
-    // 3. Jalur Cabang Lampu 2 (Bawah) melalui Saklar
-    // Dimulai dari Junction Positif Atas
-    path.moveTo(junctionXLeft, junctionYTop); 
-    path.lineTo(junctionXLeft, lamp2Y); // Turun ke ketinggian Lampu 2
-    path.lineTo(lampX, lamp2Y); // Masuk Lampu 2
-    path.lineTo(lampX, lamp2Y + 30); // Keluar Lampu 2
+    // Cabang Lampu 1
+    path.moveTo(junctionLeftX, junctionTopY);
+    path.lineTo(lampX, junctionTopY);
+    path.lineTo(lampX, lamp1Y);
+    path.lineTo(lampX, lamp1Y + 20);
+    path.lineTo(junctionRightX, lamp1Y + 20);
+    path.lineTo(junctionRightX, junctionBottomY);
 
-    // Dari Lampu 2, melalui saklar, ke Junction Negatif Bawah
-    path.lineTo(junctionXLeft, lamp2Y + 30); // Ke kiri untuk ke saklar
+    // Cabang Lampu 2 via saklar
+    path.moveTo(junctionLeftX, junctionTopY);
+    path.lineTo(junctionLeftX, lamp2Y);
+    path.lineTo(lampX, lamp2Y);
+    path.lineTo(lampX, lamp2Y + 20);
+    path.lineTo(junctionLeftX, lamp2Y + 20);
+    path.lineTo(junctionLeftX, switchY + 10);
+    path.lineTo(switchX + 20, switchY + 10);
+    path.lineTo(switchX + 20, switchY - 20);
+    path.lineTo(junctionRightX, switchY - 20);
+    path.lineTo(junctionRightX, junctionBottomY);
 
-    // Melewati area saklar (disederhanakan)
-    path.lineTo(junctionXLeft, switchY + 60); // Masuk ke Saklar
-    path.lineTo(switchX + 30, switchY + 60); // Melintasi Saklar
-    path.lineTo(switchX + 30, switchY - 40); // Keluar Saklar (ke atas)
-
-    path.lineTo(junctionXRight, switchY - 40); // ke Sisi Kanan
-    // Menghubungkan ke Titik Kumpul Negatif Utama yang sama
-    path.lineTo(junctionXRight, junctionYBottom); // Titik Kumpul Negatif Utama (Akhir Lampu 2)
-
-    // 4. Jalur Utama Baterai (-)
-    // Dimulai dari Junction Negatif Bawah
-    path.moveTo(junctionXRight, junctionYBottom);
-    path.lineTo(batteryCenterX, junctionYBottom); 
-    path.lineTo(batteryCenterX, batteryBottomY); // Baterai (-)
+    // Jalur kembali ke baterai (-)
+    path.moveTo(junctionRightX, junctionBottomY);
+    path.lineTo(batteryX, junctionBottomY);
+    path.lineTo(batteryX, batteryY);
 
     canvas.drawPath(path, _wirePaint);
   }
 
   @override
   WirePath getPath(Size size) {
-    // Jalur Komprehensif untuk Animasi Elektron.
-    // Jalur ini mengikuti jalur yang paling panjang (melalui lampu 2 dan saklar)
-    // untuk memastikan animasi elektron mencakup segmen-segmen unik.
-    
+    final w = size.width;
+    final h = size.height;
+
+    final batteryX = w * 0.2;
+    final batteryY = h * 0.8;
+    final junctionTopY = h * 0.1;
+    final junctionBottomY = h * 0.7;
+    final junctionLeftX = w * 0.25;
+    final junctionRightX = w * 0.75;
+    final lampX = w * 0.6;
+    final lamp1Y = h * 0.3;
+    final lamp2Y = h * 0.5;
+    final switchX = w * 0.35;
+    final switchY = h * 0.55;
+
     return WirePath([
-      // Dari Baterai (+) ke Junction Atas
-      Offset(batteryCenterX, batteryBottomY - 25), 
-      Offset(junctionXRight, batteryBottomY - 25),
-      Offset(junctionXRight, junctionYTop), 
-      Offset(junctionXLeft, junctionYTop), 
-      
-      // Cabang Lampu 2 (Jalur yang paling kompleks)
-      Offset(junctionXLeft, lamp2Y),
+      Offset(batteryX, batteryY),
+      Offset(junctionRightX, batteryY),
+      Offset(junctionRightX, junctionTopY),
+      Offset(junctionLeftX, junctionTopY),
+      Offset(junctionLeftX, lamp2Y),
       Offset(lampX, lamp2Y),
-      Offset(lampX, lamp2Y + 30),
-      Offset(junctionXLeft, lamp2Y + 30),
-      Offset(junctionXLeft, switchY + 60), // Masuk Saklar
-      Offset(switchX + 30, switchY + 60), // Melintasi Saklar
-      Offset(switchX + 30, switchY - 40),
-      Offset(junctionXRight, switchY - 40),
-      Offset(junctionXRight, junctionYBottom),
-      
-      // Dari Junction Bawah ke Baterai (-)
-      Offset(batteryCenterX, junctionYBottom),
-      Offset(batteryCenterX, batteryBottomY), 
+      Offset(lampX, lamp2Y + 20),
+      Offset(junctionLeftX, lamp2Y + 20),
+      Offset(junctionLeftX, switchY + 10),
+      Offset(switchX + 20, switchY + 10),
+      Offset(switchX + 20, switchY - 20),
+      Offset(junctionRightX, switchY - 20),
+      Offset(junctionRightX, junctionBottomY),
+      Offset(batteryX, junctionBottomY),
+      Offset(batteryX, batteryY),
+    ]);
+  }
+}
+
+// ----------------------------------------------------
+// CustomPainter untuk Rangkaian Seri
+// ----------------------------------------------------
+class SeriesCircuitPainter extends WirePainter {
+  SeriesCircuitPainter({
+    required super.isSwitchOn,
+    required super.animationValue,
+  });
+
+  @override
+  void drawCircuitPath(Canvas canvas, Size size) {
+    final path = Path();
+
+    final w = size.width;
+    final h = size.height;
+
+    // Loop persegi relatif
+    final leftX = w * 0.2;
+    final rightX = w * 0.8;
+    final topY = h * 0.2;
+    final bottomY = h * 0.8;
+
+    path.moveTo(w * 0.5, bottomY); // battery +
+    path.lineTo(leftX, bottomY);
+    path.lineTo(leftX, topY);
+    path.lineTo(rightX, topY);
+    path.lineTo(rightX, bottomY);
+    path.lineTo(w * 0.5, bottomY); // battery -
+
+    canvas.drawPath(path, _wirePaint);
+  }
+
+  @override
+  WirePath getPath(Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    final leftX = w * 0.2;
+    final rightX = w * 0.8;
+    final topY = h * 0.2;
+    final bottomY = h * 0.8;
+
+    return WirePath([
+      Offset(w * 0.5, bottomY),
+      Offset(leftX, bottomY),
+      Offset(leftX, topY),
+      Offset(rightX, topY),
+      Offset(rightX, bottomY),
+      Offset(w * 0.5, bottomY),
     ]);
   }
 }
