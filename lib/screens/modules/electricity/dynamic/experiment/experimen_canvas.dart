@@ -222,8 +222,55 @@ class _ExperimentCanvasState extends State<ExperimenCanvas> with TickerProviderS
   void _toggleComponentConnection(String componentId) {
     setState(() {
       final comp = _components[componentId];
-      if (comp != null && comp.type == ComponentType.switchComponent) {
+      if (comp != null && (comp.type == ComponentType.switchComponent || comp.type == ComponentType.lamp)) {
         comp.isConnected = !comp.isConnected;
+      }
+      _updateCurrentFlow();
+    });
+  }
+
+
+  // ================= HAPUS KOMPONEN (SATUAN) =================
+  void _deleteComponent(String componentId) {
+    setState(() {
+      final comp = _components.remove(componentId);
+      if (comp != null) {
+        // Hapus node jika tidak lagi terhubung ke komponen lain
+        for (final nodeId in [comp.startNodeId, comp.endNodeId]) {
+          final stillUsed = _components.values.any(
+            (c) => c.startNodeId == nodeId || c.endNodeId == nodeId,
+          );
+          if (!stillUsed) {
+            // sebelum remove node, bersihkan referensi 'connectedTo' di node lain
+            for (final other in _nodes.values) {
+              if (other.connectedTo.contains(nodeId)) {
+                other.connectedTo = other.connectedTo.where((id) => id != nodeId).toList();
+              }
+            }
+            _nodes.remove(nodeId);
+          }
+        }
+
+        // Juga cek virtual nodes yang mungkin jadi orphan (tidak terhubung ke komponen)
+        final orphans = <String>[];
+        for (final nodeEntry in _nodes.entries) {
+          final nodeId = nodeEntry.key;
+          final node = nodeEntry.value;
+          // node orphan = tidak ada komponen yang menggunakan node ini dan tidak punya connectedTo
+          final usedByComp = _components.values.any((c) => c.startNodeId == nodeId || c.endNodeId == nodeId);
+          if (!usedByComp && (node.connectedTo.isEmpty)) {
+            orphans.add(nodeId);
+          }
+        }
+        for (final orphanId in orphans) {
+          // bersihkan referensi di node lain (probabilitas kecil, tapi aman)
+          for (final other in _nodes.values) {
+            if (other.connectedTo.contains(orphanId)) {
+              other.connectedTo = other.connectedTo.where((id) => id != orphanId).toList();
+            }
+          }
+          _nodes.remove(orphanId);
+        }
       }
       _updateCurrentFlow();
     });
@@ -400,12 +447,26 @@ class _ExperimentCanvasState extends State<ExperimenCanvas> with TickerProviderS
           _buildToolButton(Icons.power_settings_new, 'Saklar', ComponentType.switchComponent),
           _buildToolButton(Icons.cable, 'Kabel', ComponentType.wire),
           const Spacer(),
-          _buildIconButton(Icons.delete, 'Hapus Semua', Colors.red, () {
-            setState(() {
-              _components.clear();
-              _updateCurrentFlow();
-            });
-          }),
+          // _buildIconButton(Icons.delete, 'Hapus Semua', Colors.red, () async {
+          //   final confirm = await showDialog<bool>(
+          //     context: context,
+          //     builder: (context) => AlertDialog(
+          //       title: const Text("Hapus Semua Komponen"),
+          //       content: const Text("Apakah kamu yakin ingin menghapus semua komponen?"),
+          //       actions: [
+          //         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Batal")),
+          //         TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Hapus")),
+          //       ],
+          //     ),
+          //   );
+          //   if (confirm == true) {
+          //     setState(() {
+          //       _components.clear();
+          //       _nodes.clear();
+          //       _updateCurrentFlow();
+          //     });
+          //   }
+          // }),
           const SizedBox(height: 8),
           _buildIconButton(Icons.clear_all, 'Reset Sirkuit', Colors.blue, () {
             _initializeDefaultCircuit();
@@ -580,28 +641,53 @@ class _ExperimentCanvasState extends State<ExperimenCanvas> with TickerProviderS
     );
   }
 
-
   Widget _buildDraggableComponent(String componentId, Widget child) {
-    return GestureDetector(
-      onPanStart: (details) {
-        if (!_isConnectingMode) setState(() => _currentlyDraggingComponentId = componentId);
-      },
-      onPanUpdate: (details) {
-        if (_currentlyDraggingComponentId == componentId) {
-          setState(() {
-            final comp = _components[componentId];
-            if (comp != null) {
-              _nodes[comp.startNodeId]?.position += details.delta;
-              _nodes[comp.endNodeId]?.position += details.delta;
-              _updateCurrentFlow();
-            }
-          });
-        }
-      },
-      onPanEnd: (_) => setState(() => _currentlyDraggingComponentId = null),
-      child: child,
-    );
-  }
+  return GestureDetector(
+    // Ketika user tap/klik komponen — kita toggle koneksi (untuk lampu/saklar)
+    onTap: () {
+      final comp = _components[componentId];
+      if (comp != null && (comp.type == ComponentType.switchComponent || comp.type == ComponentType.lamp)) {
+        _toggleComponentConnection(componentId);
+      }
+    },
+
+    // (sekali lagi) kalau mau long-press untuk hapus, tinggal buka komentar berikut:
+    // onLongPress: () async {
+    //   final confirm = await showDialog<bool>(
+    //     context: context,
+    //     builder: (context) => AlertDialog(
+    //       title: const Text("Hapus Komponen"),
+    //       content: const Text("Apakah kamu yakin ingin menghapus komponen ini?"),
+    //       actions: [
+    //         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Batal")),
+    //         TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Hapus")),
+    //       ],
+    //     ),
+    //   );
+    //   if (confirm == true) _deleteComponent(componentId);
+    // },
+
+    onPanStart: (details) {
+      if (!_isConnectingMode) {
+        setState(() => _currentlyDraggingComponentId = componentId);
+      }
+    },
+    onPanUpdate: (details) {
+      if (_currentlyDraggingComponentId == componentId) {
+        setState(() {
+          final comp = _components[componentId];
+          if (comp != null) {
+            _nodes[comp.startNodeId]?.position += details.delta;
+            _nodes[comp.endNodeId]?.position += details.delta;
+            _updateCurrentFlow();
+          }
+        });
+      }
+    },
+    onPanEnd: (_) => setState(() => _currentlyDraggingComponentId = null),
+    child: child,
+  );
+}
 
   Widget _buildSimpleSwitch(CircuitComponent switchComp) {
     final isOn = switchComp.isConnected;

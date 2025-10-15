@@ -39,7 +39,7 @@ class DynamicElectricityScreen extends StatelessWidget {
   // 📖 Daftar modul
   final List<Module> modules = [
     Module(
-      title: 'Modul 1: Konsep Dasar Listrik Statis',
+      title: 'Modul 1: Konsep Dasar Listrik Dinamis',
       description: 'Memahami muatan listrik, gaya Coulomb, dan interaksi muatan.',
       icon: Icons.flash_on,
       iconColor: Colors.orange,
