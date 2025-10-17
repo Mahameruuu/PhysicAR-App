@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'register_screen.dart';
 import 'home_screen.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -14,22 +16,42 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _obscurePassword = true;
 
-  void login() {
+  void login() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    // Akun statis
-    const staticEmail = "admin@physiclab.com";
-    const staticPassword = "admin@123";
+    if (email.isEmpty || password.isEmpty) {
+      Fluttertoast.showToast(msg: "Email dan password wajib diisi!");
+      return;
+    }
 
-    if (email == staticEmail && password == staticPassword) {
-      Fluttertoast.showToast(msg: "Login Successful (Static)");
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => HomeScreen()),
+    try {
+      final response = await http.post(
+        Uri.parse('http://127.0.0.1:8000/api/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'password': password,
+        }),
       );
-    } else {
-      Fluttertoast.showToast(msg: "Email atau password salah!");
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        Fluttertoast.showToast(msg: "Login berhasil!");
+        print("TOKEN: ${data['access_token']}"); 
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => HomeScreen()),
+        );
+      } else {
+        Fluttertoast.showToast(
+          msg: data['message'] ?? 'Login gagal!',
+        );
+      }
+    } catch (e) {
+      Fluttertoast.showToast(msg: "Terjadi kesalahan: $e");
     }
   }
 
@@ -44,32 +66,25 @@ class _LoginScreenState extends State<LoginScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF6A9BFD),
-              Color(0xFF1E88E5),
-              Color(0xFF00C6FF),
-            ],
+            colors: [Color(0xFF6A9BFD), Color(0xFF1E88E5), Color(0xFF00C6FF)],
             stops: [0.1, 0.5, 0.9],
           ),
         ),
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 40.0,
+            ),
             child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: screenHeight - 80,
-              ),
+              constraints: BoxConstraints(minHeight: screenHeight - 80),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: const [
-                      Icon(
-                        Icons.blur_circular,
-                        color: Colors.white,
-                        size: 48,
-                      ),
+                      Icon(Icons.blur_circular, color: Colors.white, size: 48),
                       SizedBox(width: 8),
                       Text(
                         'Physic Lab',
@@ -101,7 +116,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       hintStyle: const TextStyle(color: Colors.grey),
                       filled: true,
                       fillColor: Colors.white,
-                      prefixIcon: const Icon(Icons.email_outlined, color: Colors.grey),
+                      prefixIcon: const Icon(
+                        Icons.email_outlined,
+                        color: Colors.grey,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -119,10 +137,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       hintStyle: const TextStyle(color: Colors.grey),
                       filled: true,
                       fillColor: Colors.white,
-                      prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey),
+                      prefixIcon: const Icon(
+                        Icons.lock_outline,
+                        color: Colors.grey,
+                      ),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                          _obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
                           color: Colors.grey,
                         ),
                         onPressed: () {
