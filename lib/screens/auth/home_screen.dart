@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'login_screen.dart';
+import '../home/profile_screen.dart';
 import '../modules/electricity/electricity_selection_screen.dart';
 
 class HomeScreen extends StatefulWidget {
+  final String userName;
+
+  const HomeScreen({Key? key, required this.userName}) : super(key: key);
+
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
@@ -10,12 +15,18 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _widgetOptions = <Widget>[
-    const _HomeContent(),
-    const Center(child: Text('Theory Screen', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold))),
-    const Center(child: Text('Simulation Screen', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold))),
-    const Center(child: Text('Profile Screen', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold))),
-  ];
+  late final List<Widget> _widgetOptions;
+
+  @override
+  void initState() {
+    super.initState();
+    _widgetOptions = <Widget>[
+      _HomeContent(userName: widget.userName),
+      const Center(child: Text('Theory Screen', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold))),
+      const Center(child: Text('Simulation Screen', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold))),
+      ProfileScreen(userName: widget.userName), // <-- pakai ProfileScreen
+    ];
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -30,9 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: lightCyan,
-      body: _selectedIndex == 0
-          ? const _HomeContent()
-          : _widgetOptions.elementAt(_selectedIndex),
+      body: _widgetOptions[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
@@ -53,12 +62,20 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _HomeContent extends StatelessWidget {
-  const _HomeContent({Key? key}) : super(key: key);
+  final String userName; // <-- menerima nama pengguna
+
+  const _HomeContent({Key? key, required this.userName}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     const Color primaryBlue = Color(0xFF4FC3F7);
     const Color backgroundColor = Color(0xFFE0FFFF);
+
+    String getInitials(String name) {
+      List<String> parts = name.split(' ');
+      if (parts.isEmpty) return '?';
+      return parts.map((e) => e[0]).take(2).join().toUpperCase();
+    }
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -98,7 +115,14 @@ class _HomeContent extends StatelessWidget {
                     ],
                     child: CircleAvatar(
                       backgroundColor: primaryBlue.withOpacity(0.8),
-                      child: const Icon(Icons.person, color: Colors.white),
+                      child: Text(
+                        getInitials(userName), // <-- tampilkan inisial
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -267,7 +291,10 @@ class _HomeContent extends StatelessWidget {
             child: const Text("Logout"),
             onPressed: () {
               Navigator.pop(context);
-              Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => LoginScreen()));
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => LoginScreen()),
+              );
             },
           ),
         ],

@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'register_screen.dart';
 import 'home_screen.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -13,8 +15,21 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-
   bool _obscurePassword = true;
+  bool _isLoading = false;
+
+  final GoogleSignIn _googleSignIn = kIsWeb
+    ? GoogleSignIn(
+      scopes: ['email', 'profile'],
+      clientId:
+          '117086767236-ift20nrjjeq5jt3qtnm85e0qokc72o55.apps.googleusercontent.com',
+    )
+    : GoogleSignIn(
+      scopes: ['email', 'profile'],
+    );
+
+  final loginUrl = 'http://127.0.0.1:8000/api/login';
+  final googleLoginUrl = 'http://127.0.0.1:8000/api/auth/google';
 
   void login() async {
     final email = _emailController.text.trim();
@@ -27,31 +42,76 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://127.0.0.1:8000/api/login'),
+        Uri.parse(loginUrl),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'password': password,
-        }),
+        body: jsonEncode({'email': email, 'password': password}),
       );
 
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
         Fluttertoast.showToast(msg: "Login berhasil!");
-        print("TOKEN: ${data['access_token']}"); 
+        print("TOKEN: ${data['access_token']}");
+
+        final userName = data['user']['name'];
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => HomeScreen()),
+          MaterialPageRoute(builder: (_) => HomeScreen(userName: userName)),
         );
       } else {
-        Fluttertoast.showToast(
-          msg: data['message'] ?? 'Login gagal!',
-        );
+        Fluttertoast.showToast(msg: data['message'] ?? 'Login gagal!');
       }
     } catch (e) {
       Fluttertoast.showToast(msg: "Terjadi kesalahan: $e");
+    }
+  }
+
+  Future<void> loginWithGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      final account = await _googleSignIn.signIn();
+      if (account == null) {
+        Fluttertoast.showToast(msg: "Login Google dibatalkan");
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final auth = await account.authentication;
+      final idToken = auth.idToken;
+
+      final response = await http.post(
+        Uri.parse(googleLoginUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({'token': idToken}),
+      );
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        Fluttertoast.showToast(msg: "Login Google berhasil!");
+
+        final userName = data['user']['name'];
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => HomeScreen(userName: userName)),
+        );
+      } else {
+        Fluttertoast.showToast(
+          msg: data['message'] ?? 'Login Google gagal',
+          backgroundColor: Colors.red,
+        );
+      }
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "Error login Google: $e",
+        backgroundColor: Colors.red,
+      );
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -76,142 +136,172 @@ class _LoginScreenState extends State<LoginScreen> {
               horizontal: 24.0,
               vertical: 40.0,
             ),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: screenHeight - 80),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.blur_circular, color: Colors.white, size: 48),
-                      SizedBox(width: 8),
-                      Text(
-                        'Physic Lab',
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Logo
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.blur_circular, color: Colors.white, size: 48),
+                    SizedBox(width: 8),
+                    Text(
+                      'Physic Lab',
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+                SizedBox(height: screenHeight * 0.1),
+                const Text(
+                  'Welcome Back!',
+                  style: TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
                   ),
-                  SizedBox(height: screenHeight * 0.1),
-                  const Text(
-                    'Welcome Back!',
-                    textAlign: TextAlign.left,
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
+                ),
+                SizedBox(height: screenHeight * 0.05),
+
+                // Email field
+                TextField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    hintText: 'Email',
+                    filled: true,
+                    fillColor: Colors.white,
+                    prefixIcon: const Icon(
+                      Icons.email_outlined,
+                      color: Colors.grey,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
                     ),
                   ),
-                  SizedBox(height: screenHeight * 0.05),
-                  TextField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    style: const TextStyle(color: Colors.black87),
-                    decoration: InputDecoration(
-                      hintText: 'Email',
-                      hintStyle: const TextStyle(color: Colors.grey),
-                      filled: true,
-                      fillColor: Colors.white,
-                      prefixIcon: const Icon(
-                        Icons.email_outlined,
+                ),
+                const SizedBox(height: 16),
+
+                // Password field
+                TextField(
+                  controller: _passwordController,
+                  obscureText: _obscurePassword,
+                  decoration: InputDecoration(
+                    hintText: 'Password',
+                    filled: true,
+                    fillColor: Colors.white,
+                    prefixIcon: const Icon(
+                      Icons.lock_outline,
+                      color: Colors.grey,
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
                         color: Colors.grey,
                       ),
-                      border: OutlineInputBorder(
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+
+                // Login button
+                SizedBox(
+                  height: 60,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : login,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1976D2),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 18),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    style: const TextStyle(color: Colors.black87),
-                    decoration: InputDecoration(
-                      hintText: 'Password',
-                      hintStyle: const TextStyle(color: Colors.grey),
-                      filled: true,
-                      fillColor: Colors.white,
-                      prefixIcon: const Icon(
-                        Icons.lock_outline,
-                        color: Colors.grey,
-                      ),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                          color: Colors.grey,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
-                        },
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 18),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    height: 60,
-                    child: ElevatedButton(
-                      onPressed: login,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1976D2),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 8,
-                        shadowColor: Colors.black54,
-                      ),
-                      child: const Text(
-                        "Login",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        "Don't have an account?",
-                        style: TextStyle(color: Colors.white70, fontSize: 14),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => RegisterScreen()),
-                          );
-                        },
-                        child: const Text(
-                          "Sign Up",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            "Login",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Google login button
+                SizedBox(
+                  height: 60,
+                  child: ElevatedButton.icon(
+                    onPressed: _isLoading ? null : loginWithGoogle,
+                    icon: Image.asset(
+                      'assets/images/google.png',
+                      height: 24,
+                      width: 24,
+                    ),
+                    label: const Text(
+                      "Login with Google",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black87,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Sign up link
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      "Don't have an account?",
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => RegisterScreen()),
+                        );
+                      },
+                      child: const Text(
+                        "Sign Up",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
                       ),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),
