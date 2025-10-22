@@ -77,6 +77,18 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
     _initializeDefaultCircuit();
   }
 
+  void _turnOffAllLamps() {
+    setState(() {
+      for (final comp in _components.values) {
+        if (comp.type == ComponentType.lamp) {
+          comp.isWorking = false;
+          comp.isConnected = false; // Supaya muncul 'PUTUS'
+        }
+      }
+      _updateCurrentFlow();
+    });
+  }
+
   void _initializeDefaultCircuit() {
     setState(() {
       _nodes = {};
@@ -646,8 +658,12 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
     // Ketika user tap/klik komponen — kita toggle koneksi (untuk lampu/saklar)
     onTap: () {
       final comp = _components[componentId];
-      if (comp != null && (comp.type == ComponentType.switchComponent || comp.type == ComponentType.lamp)) {
-        _toggleComponentConnection(componentId);
+      if (comp != null) {
+        if (comp.type == ComponentType.switchComponent) {
+          _toggleComponentConnection(componentId);
+        } else if (comp.type == ComponentType.lamp) {
+          _turnOffAllLamps(); // Semua lampu mati saat diklik
+        }
       }
     },
 
