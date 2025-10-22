@@ -5,102 +5,131 @@ import 'module3_screen.dart';
 import 'module4_screen.dart';
 import 'module5_screen.dart';
 import 'static_lab_menu.dart';
+import 'package:physic_lab_app/screens/auth/login_screen.dart';
 
-// 🎨 Warna Tema
+// 🎨 Warna Tema Ceria
 const Color primaryColor = Color(0xFF4FC3F7);
-const Color backgroundColor = Color(0xFFE0F7FA);
-const Color cardColor = Color(0xFFFFFFFF);
-const Color textColor = Color(0xFF004D40);
+const Color backgroundColor = Color(0xFFE1F5FE);
+const Color cardColor = Colors.white;
+const Color textColor = Color(0xFF01579B);
 
-// 📘 Struktur data modul
 class Module {
   final String title;
   final String description;
   final IconData icon;
   final Color iconColor;
-  final String status;
-  final double progress;
   final String duration;
 
-  Module({
+  const Module({ // ✅ jadikan const
     required this.title,
     required this.description,
     required this.icon,
     required this.iconColor,
-    required this.status,
-    required this.progress,
     required this.duration,
   });
 }
 
 class DynamicElectricityScreen extends StatelessWidget {
-  DynamicElectricityScreen({super.key});
+  final String userName;
 
-  // 📖 Daftar modul
-  final List<Module> modules = [
+  const DynamicElectricityScreen({super.key, required this.userName});
+
+  final List<Module> modules = const [ // ✅ tambahkan const di list
     Module(
-      title: 'Modul 1: Konsep Dasar Listrik Dinamis',
-      description: 'Memahami muatan listrik, gaya Coulomb, dan interaksi muatan.',
+      title: 'Modul 1: Konsep Dasar Listrik Dinamis ⚡',
+      description: 'Apa itu listrik? Yuk kenali muatan dan arus listrik!',
       icon: Icons.flash_on,
       iconColor: Colors.orange,
-      status: 'Completed',
-      progress: 1.0,
-      duration: '15 min',
+      duration: '10 menit',
     ),
     Module(
-      title: 'Modul 2: Listrik Dinamis',
-      description: 'Mempelajari arus, tegangan, hambatan, dan hukum Ohm.',
+      title: 'Modul 2: Arus dan Tegangan 🔋',
+      description: 'Pelajari hubungan antara arus, tegangan, dan hambatan!',
       icon: Icons.electric_bolt,
       iconColor: Colors.redAccent,
-      status: 'Completed',
-      progress: 1.0,
-      duration: '20 min',
+      duration: '12 menit',
     ),
     Module(
-      title: 'Modul 3: Medan Listrik',
-      description: 'Menjelaskan konsep medan listrik dan gaya pada muatan uji.',
+      title: 'Modul 3: Medan Listrik 🌈',
+      description: 'Gimana sih arah gaya pada muatan listrik?',
       icon: Icons.bubble_chart,
       iconColor: Colors.blueAccent,
-      status: 'In Progress',
-      progress: 0.4,
-      duration: '25 min',
+      duration: '15 menit',
     ),
     Module(
-      title: 'Modul 4: Induksi dan Elektroskop',
-      description: 'Melihat fenomena elektroskop serta perpindahan muatan.',
+      title: 'Modul 4: Elektroskop & Induksi 🔍',
+      description: 'Eksperimen sederhana mengenal elektroskop!',
       icon: Icons.science_outlined,
       iconColor: Colors.green,
-      status: 'Not Started',
-      progress: 0.0,
-      duration: '30 min',
+      duration: '10 menit',
     ),
     Module(
-      title: 'Modul 5: Penerapan Listrik Statis',
-      description: 'Menjelaskan penerapan listrik statis dalam kehidupan sehari-hari.',
+      title: 'Modul 5: Penerapan Listrik Sehari-hari 💡',
+      description: 'Bagaimana listrik membantu kehidupan kita?',
       icon: Icons.engineering,
       iconColor: Colors.purple,
-      status: 'Not Started',
-      progress: 0.0,
-      duration: '25 min',
+      duration: '8 menit',
     ),
   ];
 
+  // --- Ambil inisial nama ---
+  String getInitials(String name) {
+    List<String> parts = name.split(' ');
+    if (parts.isEmpty) return '?';
+    return parts.map((e) => e[0]).take(2).join().toUpperCase();
+  }
+
+  // --- Logout dialog ---
+  static void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Logout"),
+        content: const Text("Apakah kamu yakin ingin keluar?"),
+        actions: [
+          TextButton(
+            child: const Text("Batal"),
+            onPressed: () => Navigator.pop(context),
+          ),
+          TextButton(
+            child: const Text("Logout"),
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushReplacement(
+                context,
+                // ❌ jangan pakai const kalau LoginScreen() bukan const constructor
+                MaterialPageRoute(builder: (_) => LoginScreen()),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    double overallProgress =
-        modules.fold(0.0, (sum, m) => sum + m.progress) / modules.length;
-
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
         child: Column(
           children: [
             _buildHeader(context),
-            _buildProgressSummary(overallProgress),
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text(
+                "Yuk, pelajari konsep listrik dengan cara seru!",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: textColor,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
             Expanded(
               child: ListView.builder(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
                 itemCount: modules.length,
                 itemBuilder: (context, index) {
                   return _buildModuleCard(context, modules[index]);
@@ -117,6 +146,8 @@ class DynamicElectricityScreen extends StatelessWidget {
 
   // --- HEADER ---
   Widget _buildHeader(BuildContext context) {
+    String initials = getInitials(userName);
+
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -140,164 +171,103 @@ class DynamicElectricityScreen extends StatelessWidget {
               color: Colors.white,
               fontWeight: FontWeight.bold,
               fontSize: 20,
-              letterSpacing: 0.5,
             ),
           ),
-          const CircleAvatar(
-            radius: 18,
-            backgroundColor: Colors.white,
-            child: Icon(Icons.person_outline, color: primaryColor),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'Logout') {
+                _showLogoutDialog(context);
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 'Setting', child: Text('Setting')),
+              PopupMenuItem(value: 'Logout', child: Text('Logout')),
+            ],
+            child: CircleAvatar(
+              radius: 18,
+              backgroundColor: Colors.white,
+              child: Text(
+                initials,
+                style: const TextStyle(
+                  color: primaryColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  // --- PROGRESS SUMMARY ---
-  Widget _buildProgressSummary(double progress) {
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Kemajuan Belajar Kamu',
-            style: TextStyle(fontSize: 14, color: Colors.grey),
-          ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: Colors.grey.shade300,
-              valueColor: const AlwaysStoppedAnimation(primaryColor),
-              minHeight: 10,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            '${(progress * 100).toInt()}% Selesai',
-            style: const TextStyle(
-                color: textColor, fontWeight: FontWeight.w600, fontSize: 14),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- MODULE CARD ---
+  // --- MODULE CARD TANPA PROGRES ---
   Widget _buildModuleCard(BuildContext context, Module module) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      margin: const EdgeInsets.only(bottom: 16.0),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            offset: const Offset(0, 4),
-            blurRadius: 10,
+    return GestureDetector(
+      onTap: () {
+        if (module.title.contains('Modul 1')) {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => Module1Screen()));
+        } else if (module.title.contains('Modul 2')) {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => Module2Screen()));
+        } else if (module.title.contains('Modul 3')) {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => Module3Screen()));
+        } else if (module.title.contains('Modul 4')) {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => Module4Screen()));
+        } else if (module.title.contains('Modul 5')) {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => Module5Screen()));
+        }
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+        margin: const EdgeInsets.only(bottom: 16.0),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              offset: const Offset(0, 4),
+              blurRadius: 10,
+            ),
+          ],
+        ),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          leading: CircleAvatar(
+            radius: 28,
+            backgroundColor: module.iconColor.withOpacity(0.2),
+            child: Icon(module.icon, color: module.iconColor, size: 30),
           ),
-        ],
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(22),
-        onTap: () {
-          if (module.title.contains('Modul 1')) {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => Module1Screen()));
-          } else if (module.title.contains('Modul 2')) {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => Module2Screen()));
-          } else if (module.title.contains('Modul 3')) {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => Module3Screen()));
-          } else if (module.title.contains('Modul 4')) {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => Module4Screen()));
-          } else if (module.title.contains('Modul 5')) {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => Module5Screen()));
-          }
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
+          title: Text(
+            module.title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: textColor,
+            ),
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Hero(
-                tag: module.title,
-                child: CircleAvatar(
-                  radius: 28,
-                  backgroundColor: module.iconColor.withOpacity(0.2),
-                  child: Icon(module.icon, color: module.iconColor, size: 30),
-                ),
+              const SizedBox(height: 6),
+              Text(
+                module.description,
+                style: const TextStyle(fontSize: 13, color: Colors.black54),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(module.title,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: textColor)),
-                    const SizedBox(height: 4),
-                    Text(
-                      module.description,
-                      style: const TextStyle(color: Colors.black54, fontSize: 13),
-                    ),
-                    const SizedBox(height: 10),
-                    _buildModuleStatus(module),
-                  ],
-                ),
-              ),
+              const SizedBox(height: 6),
             ],
           ),
+          trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.grey, size: 18),
         ),
       ),
     );
   }
 
-  // --- STATUS BAR ---
-  Widget _buildModuleStatus(Module module) {
-    if (module.status == 'Completed') {
-      return Row(
-        children: const [
-          Icon(Icons.check_circle, color: Colors.green, size: 16),
-          SizedBox(width: 6),
-          Text('Selesai', style: TextStyle(color: Colors.green)),
-        ],
-      );
-    } else if (module.status == 'In Progress') {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '${(module.progress * 100).toInt()}% Selesai',
-            style: const TextStyle(color: primaryColor),
-          ),
-          const SizedBox(height: 4),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: module.progress,
-              backgroundColor: Colors.grey.shade300,
-              valueColor: const AlwaysStoppedAnimation(primaryColor),
-              minHeight: 6,
-            ),
-          ),
-        ],
-      );
-    } else {
-      return Text('Durasi: ${module.duration}',
-          style: const TextStyle(color: Colors.grey));
-    }
-  }
-
-  // --- TOMBOL LAB VIRTUAL ---
+  // --- FAB LAB ---
   Widget _buildFloatingLabButton(BuildContext context) {
     return FloatingActionButton.extended(
       onPressed: () {
-        Navigator.push(
-            context, MaterialPageRoute(builder: (_) => const StaticLabMenu()));
+        Navigator.push(context, MaterialPageRoute(builder: (_) => StaticLabMenu()));
       },
       backgroundColor: primaryColor,
       icon: const Icon(Icons.science_outlined, color: Colors.white),
@@ -308,21 +278,19 @@ class DynamicElectricityScreen extends StatelessWidget {
     );
   }
 
-  // --- BOTTOM NAVIGATION ---
+  // --- NAV BAR ---
   Widget _buildBottomNavigationBar() {
     return BottomNavigationBar(
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.menu_book_outlined), label: 'Theory'),
-        BottomNavigationBarItem(icon: Icon(Icons.science_outlined), label: 'Simulation'),
-        BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+        BottomNavigationBarItem(icon: Icon(Icons.menu_book_outlined), label: 'Modul'),
+        BottomNavigationBarItem(icon: Icon(Icons.science_outlined), label: 'Lab'),
+        BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profil'),
       ],
       currentIndex: 1,
       selectedItemColor: primaryColor,
       unselectedItemColor: Colors.grey,
       type: BottomNavigationBarType.fixed,
-      backgroundColor: Colors.white,
-      showUnselectedLabels: true,
     );
   }
 }

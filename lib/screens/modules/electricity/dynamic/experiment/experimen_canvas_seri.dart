@@ -10,7 +10,7 @@ class CircuitNode {
   final String id;
   Offset position;
   List<String> connectedTo;
-  bool currentFlow; // untuk aliran listrik
+  bool currentFlow;
 
   CircuitNode({
     required this.id,
@@ -25,7 +25,7 @@ class CircuitComponent {
   final ComponentType type;
   final String startNodeId;
   final String endNodeId;
-  double? value;
+  double? value; // untuk battery: V, lamp: R
   bool isWorking;
   bool isConnected;
 
@@ -41,6 +41,7 @@ class CircuitComponent {
 
   List<String> getNodeIds() => [startNodeId, endNodeId];
 }
+
 // ============================================
 
 class ExperimenCanvasSeri extends StatefulWidget {
@@ -61,6 +62,11 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
   bool _isConnectingMode = false;
   String? _firstSelectedNodeId;
 
+  // ============= Tambahan Variabel Perhitungan VIR =============
+  double _totalVoltage = 0.0;
+  double _totalResistance = 0.0;
+  double _current = 0.0;
+
   @override
   void initState() {
     super.initState();
@@ -77,6 +83,9 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
       _components = {};
       _isConnectingMode = false;
       _firstSelectedNodeId = null;
+      _totalVoltage = 0;
+      _totalResistance = 0;
+      _current = 0;
     });
   }
 
@@ -86,7 +95,7 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
     super.dispose();
   }
 
-  // ============== LOGIKA INTERAKSI ==============
+  // ================= LOGIKA INTERAKSI =================
   void _addNewComponent(ComponentType type) {
     if (type == ComponentType.wire) {
       setState(() {
@@ -104,24 +113,18 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
     }
 
     final newCompId = 'C${_components.length + 1}';
+    final currentNodesCount = _nodes.length;
+
+    final initialX = 200.0 + (_components.length % 5) * 60.0;
+    final initialY = 150.0 + (_components.length ~/ 5) * 60.0;
     const componentSpacing = 50.0;
 
-    String? lastNodeId;
-    Offset lastNodePos = Offset(200, 150);
+    final newNodeId1 = 'N${currentNodesCount + 1}';
+    final node1Position = Offset(initialX, initialY);
+    final newNode1 = CircuitNode(id: newNodeId1, position: node1Position);
 
-    if (_components.isNotEmpty) {
-      final lastComp = _components.values.last;
-      lastNodeId = lastComp.endNodeId;
-      lastNodePos = _nodes[lastNodeId]!.position;
-    }
-
-    final newNodeId1 = lastNodeId ?? 'N${_nodes.length + 1}';
-    final node1Position = lastNodePos;
-
-    final newNodeId2 = 'N${_nodes.length + 1 + (lastNodeId != null ? 0 : 1)}';
-    final node2Position = node1Position + const Offset(componentSpacing, 0);
-
-    final newNode1 = _nodes[newNodeId1] ?? CircuitNode(id: newNodeId1, position: node1Position);
+    final newNodeId2 = 'N${currentNodesCount + 2}';
+    final node2Position = Offset(initialX + componentSpacing, initialY);
     final newNode2 = CircuitNode(id: newNodeId2, position: node2Position);
 
     final newComponent = CircuitComponent(
@@ -129,6 +132,9 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
       type: type,
       startNodeId: newNodeId1,
       endNodeId: newNodeId2,
+      value: type == ComponentType.lamp
+          ? 2.0
+          : (type == ComponentType.battery ? 9.0 : null), // default R lampu=2Ω, V baterai=9V
     );
 
     setState(() {
@@ -139,7 +145,6 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
       _updateCurrentFlow();
     });
   }
-
 
   String? _findClosestNode(Offset tapPosition) {
     const double tapTolerance = 30.0;
@@ -217,26 +222,69 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
   void _toggleComponentConnection(String componentId) {
     setState(() {
       final comp = _components[componentId];
-      if (comp != null && comp.type == ComponentType.switchComponent) {
+      if (comp != null && (comp.type == ComponentType.switchComponent || comp.type == ComponentType.lamp)) {
         comp.isConnected = !comp.isConnected;
       }
       _updateCurrentFlow();
     });
   }
 
-  // ============== LOGIKA ARUS LISTRIK SERI ==============
+
+  // ================= HAPUS KOMPONEN (SATUAN) =================
+  void _deleteComponent(String componentId) {
+    setState(() {
+      final comp = _components.remove(componentId);
+      if (comp != null) {
+        // Hapus node jika tidak lagi terhubung ke komponen lain
+        for (final nodeId in [comp.startNodeId, comp.endNodeId]) {
+          final stillUsed = _components.values.any(
+            (c) => c.startNodeId == nodeId || c.endNodeId == nodeId,
+          );
+          if (!stillUsed) {
+            // sebelum remove node, bersihkan referensi 'connectedTo' di node lain
+            for (final other in _nodes.values) {
+              if (other.connectedTo.contains(nodeId)) {
+                other.connectedTo = other.connectedTo.where((id) => id != nodeId).toList();
+              }
+            }
+            _nodes.remove(nodeId);
+          }
+        }
+
+        // Juga cek virtual nodes yang mungkin jadi orphan (tidak terhubung ke komponen)
+        final orphans = <String>[];
+        for (final nodeEntry in _nodes.entries) {
+          final nodeId = nodeEntry.key;
+          final node = nodeEntry.value;
+          // node orphan = tidak ada komponen yang menggunakan node ini dan tidak punya connectedTo
+          final usedByComp = _components.values.any((c) => c.startNodeId == nodeId || c.endNodeId == nodeId);
+          if (!usedByComp && (node.connectedTo.isEmpty)) {
+            orphans.add(nodeId);
+          }
+        }
+        for (final orphanId in orphans) {
+          // bersihkan referensi di node lain (probabilitas kecil, tapi aman)
+          for (final other in _nodes.values) {
+            if (other.connectedTo.contains(orphanId)) {
+              other.connectedTo = other.connectedTo.where((id) => id != orphanId).toList();
+            }
+          }
+          _nodes.remove(orphanId);
+        }
+      }
+      _updateCurrentFlow();
+    });
+  }
+
+  // ================= LOGIKA ARUS LISTRIK (VIR) =================
   void _updateCurrentFlow() {
-    // Reset semua node dan komponen
-    for (var node in _nodes.values) {
-      node.currentFlow = false;
-    }
+    for (var node in _nodes.values) node.currentFlow = false;
     for (var comp in _components.values) {
       if (comp.type == ComponentType.lamp || comp.type == ComponentType.switchComponent) {
         comp.isWorking = false;
       }
     }
 
-    // Cari baterai pertama
     CircuitComponent? batteryComp;
     for (final c in _components.values) {
       if (c.type == ComponentType.battery) {
@@ -248,10 +296,28 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
     if (batteryComp == null) return;
 
     final startNodeId = batteryComp.startNodeId;
-    _propagateCurrentSeries(startNodeId, <String>{});
+    _propagateCurrent(startNodeId, <String>{});
+
+    // ========== Tambahan Perhitungan VIR ==========
+    _totalVoltage = batteryComp.value ?? 0;
+    _totalResistance = 0.0;
+
+    for (final comp in _components.values) {
+      if (comp.type == ComponentType.lamp && comp.isConnected) {
+        _totalResistance += comp.value ?? 0;
+      }
+    }
+
+    if (_totalResistance > 0) {
+      _current = _totalVoltage / _totalResistance;
+    } else {
+      _current = 0.0;
+    }
+
+    setState(() {});
   }
 
-  void _propagateCurrentSeries(String nodeId, Set<String> visitedNodes) {
+  void _propagateCurrent(String nodeId, Set<String> visitedNodes) {
     if (visitedNodes.contains(nodeId)) return;
     visitedNodes.add(nodeId);
 
@@ -260,24 +326,25 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
 
     node.currentFlow = true;
 
-    // Seri: telusuri hanya jalur linear melalui komponen
     for (final comp in _components.values) {
-      if (!comp.isConnected) continue;
       if (comp.type == ComponentType.switchComponent && !comp.isConnected) continue;
+      if (!comp.isConnected) continue;
 
       if (comp.startNodeId == nodeId) {
         if (comp.type == ComponentType.lamp) comp.isWorking = true;
-        _propagateCurrentSeries(comp.endNodeId, visitedNodes);
+        _propagateCurrent(comp.endNodeId, visitedNodes);
       } else if (comp.endNodeId == nodeId) {
         if (comp.type == ComponentType.lamp) comp.isWorking = true;
-        _propagateCurrentSeries(comp.startNodeId, visitedNodes);
+        _propagateCurrent(comp.startNodeId, visitedNodes);
       }
     }
 
-    // 🚫 Hapus bagian connectedTo agar tidak bercabang → seri murni
+    for (final connectedNodeId in node.connectedTo) {
+      _propagateCurrent(connectedNodeId, visitedNodes);
+    }
   }
 
-  // ============== WIDGET UTAMA DAN TATA LETAK ==============
+  // ================= WIDGET UTAMA =================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -291,31 +358,55 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
       body: AnimatedBuilder(
         animation: _animationController,
         builder: (context, child) {
-          return Row(
+          return Column(
             children: [
-              _buildToolPanel(),
               Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 12),
-                      const Padding(
-                        padding: EdgeInsets.all(10.0),
-                        child: Text(
-                          "Rangkaian Kustom",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 24,
-                            color: Colors.black87,
-                          ),
+                child: Row(
+                  children: [
+                    _buildToolPanel(),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 12),
+                            const Padding(
+                              padding: EdgeInsets.all(10.0),
+                              child: Text(
+                                "Rangkaian Kustom",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 24,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
+                            _buildCustomCircuit(),
+                            const SizedBox(height: 20),
+                            _buildARButton(),
+                            const SizedBox(height: 20),
+                          ],
                         ),
                       ),
-                      _buildCustomCircuit(),
-                      const SizedBox(height: 20),
-                      _buildARButton(),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // =========== PANEL VISUAL VIR ===========
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                color: Colors.blueGrey.shade50,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("🔋 Tegangan Total (V): ${_totalVoltage.toStringAsFixed(2)} V",
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                    Text("💡 Hambatan Total (R): ${_totalResistance.toStringAsFixed(2)} Ω",
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                    Text("⚡ Arus Total (I): ${_current.toStringAsFixed(3)} A",
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blue)),
+                  ],
                 ),
               ),
             ],
@@ -325,7 +416,7 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
     );
   }
 
-  // ------------------- TOOL PANEL -------------------
+  // ================= TOOL PANEL =================
   Widget _buildToolPanel() {
     return Container(
       width: 110,
@@ -356,12 +447,26 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
           _buildToolButton(Icons.power_settings_new, 'Saklar', ComponentType.switchComponent),
           _buildToolButton(Icons.cable, 'Kabel', ComponentType.wire),
           const Spacer(),
-          _buildIconButton(Icons.delete, 'Hapus Semua', Colors.red, () {
-            setState(() {
-              _components.clear();
-              _updateCurrentFlow();
-            });
-          }),
+          // _buildIconButton(Icons.delete, 'Hapus Semua', Colors.red, () async {
+          //   final confirm = await showDialog<bool>(
+          //     context: context,
+          //     builder: (context) => AlertDialog(
+          //       title: const Text("Hapus Semua Komponen"),
+          //       content: const Text("Apakah kamu yakin ingin menghapus semua komponen?"),
+          //       actions: [
+          //         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Batal")),
+          //         TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Hapus")),
+          //       ],
+          //     ),
+          //   );
+          //   if (confirm == true) {
+          //     setState(() {
+          //       _components.clear();
+          //       _nodes.clear();
+          //       _updateCurrentFlow();
+          //     });
+          //   }
+          // }),
           const SizedBox(height: 8),
           _buildIconButton(Icons.clear_all, 'Reset Sirkuit', Colors.blue, () {
             _initializeDefaultCircuit();
@@ -425,10 +530,10 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
     );
   }
 
-  // ------------------- CUSTOM CIRCUIT -------------------
+  // ================= CUSTOM CIRCUIT =================
   Widget _buildCustomCircuit() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       child: Container(
         width: double.infinity,
         height: 480,
@@ -444,74 +549,92 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
             ),
           ],
         ),
-        child: GestureDetector(
-          onTapUp: (details) => _handleCanvasTap(details.localPosition),
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: FlexibleWirePainter(
-                    nodes: _nodes,
-                    components: _components,
-                    animationValue: _animationController.value,
-                  ),
-                ),
-              ),
-              ..._components.values.map((comp) {
-                final startNode = _nodes[comp.startNodeId];
-                final endNode = _nodes[comp.endNodeId];
-                if (startNode == null || endNode == null) return const SizedBox.shrink();
-
-                final centerPosition = (startNode.position + endNode.position) / 2;
-
-                Widget componentWidget;
-                switch (comp.type) {
-                  case ComponentType.lamp:
-                    componentWidget = _buildInteractiveLamp(comp);
-                    break;
-                  case ComponentType.battery:
-                    componentWidget = const BatteryWidget();
-                    break;
-                  case ComponentType.switchComponent:
-                    componentWidget = _buildSimpleSwitch(comp);
-                    break;
-                  default:
-                    componentWidget = const SizedBox.shrink();
-                }
-
-                return Positioned(
-                  left: centerPosition.dx - 30,
-                  top: centerPosition.dy - 15,
-                  child: _buildDraggableComponent(comp.id, componentWidget),
-                );
-              }).toList(),
-
-              ..._nodes.values
-                  .where((node) => _findComponentByNodeId(node.id) == null)
-                  .map((node) {
-                    return Positioned(
-                      left: node.position.dx - 10,
-                      top: node.position.dy - 10,
-                      child: GestureDetector(
-                        onPanUpdate: (details) {
-                          setState(() {
-                            node.position += details.delta;
-                            _updateCurrentFlow();
-                          });
-                        },
-                        child: Container(
-                          width: 20,
-                          height: 20,
-                          decoration: BoxDecoration(
-                            color: Colors.purple.withOpacity(0.5),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.purple.shade900, width: 2),
-                          ),
+        // Tambahkan InteractiveViewer agar bisa di-zoom & scroll
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: InteractiveViewer(
+            minScale: 0.5,
+            maxScale: 2.5,
+            boundaryMargin: const EdgeInsets.all(200),
+            constrained: false,
+            child: GestureDetector(
+              onTapUp: (details) => _handleCanvasTap(details.localPosition),
+              child: SizedBox(
+                width: 2000, // area kerja luas
+                height: 2000,
+                child: Stack(
+                  children: [
+                    // ============ Gambar kabel =============
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: FlexibleWirePainter(
+                          nodes: _nodes,
+                          components: _components,
+                          animationValue: _animationController.value,
                         ),
                       ),
-                    );
-                  }).toList(),
-            ],
+                    ),
+
+                    // ============ Komponen =============
+                    ..._components.values.map((comp) {
+                      final startNode = _nodes[comp.startNodeId];
+                      final endNode = _nodes[comp.endNodeId];
+                      if (startNode == null || endNode == null) return const SizedBox.shrink();
+
+                      final centerPosition = (startNode.position + endNode.position) / 2;
+
+                      Widget componentWidget;
+                      switch (comp.type) {
+                        case ComponentType.lamp:
+                          componentWidget = _buildInteractiveLamp(comp);
+                          break;
+                        case ComponentType.battery:
+                          componentWidget = _buildInteractiveBattery(comp);
+                          break;
+                        case ComponentType.switchComponent:
+                          componentWidget = _buildSimpleSwitch(comp);
+                          break;
+                        default:
+                          componentWidget = const SizedBox.shrink();
+                      }
+
+                      return Positioned(
+                        left: centerPosition.dx - 30,
+                        top: centerPosition.dy - 15,
+                        child: _buildDraggableComponent(comp.id, componentWidget),
+                      );
+                    }),
+
+                    // ============ Node =============
+                    ..._nodes.values
+                        .where((node) => _findComponentByNodeId(node.id) == null)
+                        .map((node) {
+                      return Positioned(
+                        left: node.position.dx - 10,
+                        top: node.position.dy - 10,
+                        child: GestureDetector(
+                          onPanUpdate: (details) {
+                            setState(() {
+                              node.position += details.delta;
+                              _updateCurrentFlow();
+                            });
+                          },
+                          child: Container(
+                            width: 20,
+                            height: 20,
+                            decoration: BoxDecoration(
+                              color: Colors.purple.withOpacity(0.5),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.purple.shade900, width: 2),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -519,23 +642,52 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
   }
 
   Widget _buildDraggableComponent(String componentId, Widget child) {
-    return GestureDetector(
-      onPanUpdate: (details) {
-        if (_currentlyDraggingComponentId == componentId) {
-          setState(() {
-            final comp = _components[componentId];
-            if (comp != null) {
-              // Geser hanya node akhir komponen
-              _nodes[comp.endNodeId]?.position += details.delta;
-              _updateCurrentFlow();
-            }
-          });
-        }
-      },
-      onPanEnd: (_) => setState(() => _currentlyDraggingComponentId = null),
-      child: child,
-    );
-  }
+  return GestureDetector(
+    // Ketika user tap/klik komponen — kita toggle koneksi (untuk lampu/saklar)
+    onTap: () {
+      final comp = _components[componentId];
+      if (comp != null && (comp.type == ComponentType.switchComponent || comp.type == ComponentType.lamp)) {
+        _toggleComponentConnection(componentId);
+      }
+    },
+
+    // (sekali lagi) kalau mau long-press untuk hapus, tinggal buka komentar berikut:
+    // onLongPress: () async {
+    //   final confirm = await showDialog<bool>(
+    //     context: context,
+    //     builder: (context) => AlertDialog(
+    //       title: const Text("Hapus Komponen"),
+    //       content: const Text("Apakah kamu yakin ingin menghapus komponen ini?"),
+    //       actions: [
+    //         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Batal")),
+    //         TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Hapus")),
+    //       ],
+    //     ),
+    //   );
+    //   if (confirm == true) _deleteComponent(componentId);
+    // },
+
+    onPanStart: (details) {
+      if (!_isConnectingMode) {
+        setState(() => _currentlyDraggingComponentId = componentId);
+      }
+    },
+    onPanUpdate: (details) {
+      if (_currentlyDraggingComponentId == componentId) {
+        setState(() {
+          final comp = _components[componentId];
+          if (comp != null) {
+            _nodes[comp.startNodeId]?.position += details.delta;
+            _nodes[comp.endNodeId]?.position += details.delta;
+            _updateCurrentFlow();
+          }
+        });
+      }
+    },
+    onPanEnd: (_) => setState(() => _currentlyDraggingComponentId = null),
+    child: child,
+  );
+}
 
   Widget _buildSimpleSwitch(CircuitComponent switchComp) {
     final isOn = switchComp.isConnected;
@@ -556,23 +708,55 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
     );
   }
 
+  // ================= WIDGET LAMPU + SLIDER =================
   Widget _buildInteractiveLamp(CircuitComponent lamp) {
     final isLit = lamp.isWorking && lamp.isConnected;
     return Column(
       children: [
         LampWidget(
           isLit: isLit,
-          brightnessFactor: isLit ? 1.0 : 0.15, // lampu mati lebih redup
+          brightnessFactor: isLit ? 1.0 : 0.15,
         ),
         if (!lamp.isConnected)
-          const Text(
-            'PUTUS',
-            style: TextStyle(
-              color: Colors.red,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-          ),
+          const Text('PUTUS', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
+        _buildComponentSlider(lamp),
+      ],
+    );
+  }
+
+  Widget _buildInteractiveBattery(CircuitComponent battery) {
+    return Column(
+      children: [
+        const BatteryWidget(),
+        _buildComponentSlider(battery),
+      ],
+    );
+  }
+
+  // ================= SLIDER VIR =================
+  Widget _buildComponentSlider(CircuitComponent comp) {
+    if (comp.type != ComponentType.lamp && comp.type != ComponentType.battery) return const SizedBox.shrink();
+
+    final label = comp.type == ComponentType.lamp ? 'R (Ω)' : 'V (V)';
+    final min = comp.type == ComponentType.lamp ? 1.0 : 1.0;
+    final max = comp.type == ComponentType.lamp ? 10.0 : 20.0;
+
+    return Column(
+      children: [
+        Text('$label: ${comp.value?.toStringAsFixed(1)}', style: const TextStyle(fontSize: 12)),
+        Slider(
+          value: comp.value ?? min,
+          min: min,
+          max: max,
+          divisions: ((max - min) * 2).toInt(),
+          label: comp.value?.toStringAsFixed(1),
+          onChanged: (val) {
+            setState(() {
+              comp.value = val;
+              _updateCurrentFlow();
+            });
+          },
+        ),
       ],
     );
   }

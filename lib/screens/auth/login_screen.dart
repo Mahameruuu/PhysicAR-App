@@ -6,6 +6,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'register_screen.dart';
 import 'home_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -51,9 +53,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (response.statusCode == 200) {
         Fluttertoast.showToast(msg: "Login berhasil!");
-        print("TOKEN: ${data['access_token']}");
-
+        
+        final token = data['access_token'];
         final userName = data['user']['name'];
+
+        // Simpan token secara otomatis
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_token', token);
 
         Navigator.pushReplacement(
           context,
@@ -93,7 +99,12 @@ class _LoginScreenState extends State<LoginScreen> {
       if (response.statusCode == 200) {
         Fluttertoast.showToast(msg: "Login Google berhasil!");
 
+        final token = data['access_token'];
         final userName = data['user']['name'];
+
+        // Simpan token otomatis
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_token', token);
 
         Navigator.pushReplacement(
           context,

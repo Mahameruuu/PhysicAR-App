@@ -1,35 +1,146 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-// Asumsi LoginScreen ada di jalur yang benar
-import '../auth/login_screen.dart'; 
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
-class ProfileScreen extends StatelessWidget {
-  final String userName;
-  // Contoh data tambahan agar widget lebih fungsional
-  final String userEmail;
-  final String userPhoneNumber;
-  final String userWebsite;
-  final String userRole;
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({Key? key}) : super(key: key);
 
-  const ProfileScreen({
-    Key? key,
-    required this.userName,
-    this.userEmail = "vikasassudani909@gmail.com",
-    this.userPhoneNumber = "+91 9876543210",
-    this.userWebsite = "www.vikasassudani.com",
-    this.userRole = "UI/UX Designer",
-  }) : super(key: key);
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
 
-  // Widget kustom untuk meniru tampilan kolom input di gambar
-  Widget _buildTextFieldContainer({
+class _ProfileScreenState extends State<ProfileScreen> {
+  final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
+
+  // Controller untuk tiap field
+  final TextEditingController _fullNameController = TextEditingController();
+  final TextEditingController _genderController = TextEditingController();
+  final TextEditingController _birthDateController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfileFromLocal(); // tampilkan data lokal dulu
+    _fetchProfile(); // fetch terbaru dari server
+  }
+
+  // 1️⃣ Load data dari SharedPreferences
+  Future<void> _loadProfileFromLocal() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _fullNameController.text = prefs.getString('full_name') ?? '';
+      _genderController.text = prefs.getString('gender') ?? '';
+      _birthDateController.text = prefs.getString('birth_date') ?? '';
+      _addressController.text = prefs.getString('address') ?? '';
+      _phoneController.text = prefs.getString('phone') ?? '';
+    });
+  }
+
+  // 2️⃣ Fetch profile dari server
+  Future<void> _fetchProfile() async {
+    setState(() => _isLoading = true);
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('user_token') ?? '';
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://10.0.2.2:8000/api/profile'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body)['data'];
+        setState(() {
+          _fullNameController.text = data['full_name'] ?? '';
+          _genderController.text = data['gender'] ?? '';
+          _birthDateController.text = data['birth_date'] ?? '';
+          _addressController.text = data['address'] ?? '';
+          _phoneController.text = data['phone'] ?? '';
+        });
+
+        // Simpan lokal supaya tetap muncul saat balik ke screen
+        await prefs.setString('full_name', data['full_name'] ?? '');
+        await prefs.setString('gender', data['gender'] ?? '');
+        await prefs.setString('birth_date', data['birth_date'] ?? '');
+        await prefs.setString('address', data['address'] ?? '');
+        await prefs.setString('phone', data['phone'] ?? '');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal mengambil data profile')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+
+    setState(() => _isLoading = false);
+  }
+
+  // 3️⃣ Update profile
+  Future<void> _updateProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('user_token') ?? '';
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://10.0.2.2:8000/api/profile'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'full_name': _fullNameController.text,
+          'gender': _genderController.text,
+          'birth_date': _birthDateController.text,
+          'address': _addressController.text,
+          'phone': _phoneController.text,
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Update SharedPreferences juga
+        await prefs.setString('full_name', _fullNameController.text);
+        await prefs.setString('gender', _genderController.text);
+        await prefs.setString('birth_date', _birthDateController.text);
+        await prefs.setString('address', _addressController.text);
+        await prefs.setString('phone', _phoneController.text);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile berhasil diupdate!')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal update profile')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+
+    setState(() => _isLoading = false);
+  }
+
+  // 4️⃣ Build textfield reusable
+  Widget _buildTextField({
     required String label,
-    required String value,
-    required IconData icon,
+    required TextEditingController controller,
     bool isPassword = false,
+    TextInputType keyboardType = TextInputType.text,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Label di atas kolom input
         Text(
           label,
           style: TextStyle(
@@ -39,33 +150,24 @@ class ProfileScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        // Container yang meniru TextField
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100, // Latar belakang abu-abu muda untuk kolom
-            borderRadius: BorderRadius.circular(10),
+        TextFormField(
+          controller: controller,
+          obscureText: isPassword,
+          keyboardType: keyboardType,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.grey.shade100,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  isPassword ? '••••••••••' : value,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.black87,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Icon(
-                icon,
-                color: Colors.grey.shade600,
-                size: 20,
-              ),
-            ],
-          ),
+          validator: (value) {
+            if (!isPassword && (value == null || value.isEmpty)) {
+              return '$label tidak boleh kosong';
+            }
+            return null;
+          },
         ),
         const SizedBox(height: 16),
       ],
@@ -74,139 +176,57 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Warna tema dari gambar
-    const Color primaryPurple = Color(0xFF4FC3F7); // Warna ungu yang lebih gelap untuk latar depan
-    const Color lightPurpleBackground = Color(0xFFF3E5F5); // Ungu muda untuk latar belakang utama
+    const Color primaryPurple = Color(0xFF4FC3F7);
+    const Color lightPurpleBackground = Color(0xFFF3E5F5);
 
     return Scaffold(
-      // Mengatur latar belakang Scaffold menjadi ungu muda
-      backgroundColor: lightPurpleBackground, 
-      
-      body: Stack(
-        children: [
-          // 1. Bagian Header Ungu di atas
-          Container(
-            height: 250, // Sesuaikan tinggi sesuai kebutuhan
-            decoration: const BoxDecoration(
-              color: primaryPurple, // Ungu gelap untuk header
-            ),
-          ),
-          
-          // 2. Konten Utama (Scrollable)
-          SingleChildScrollView(
-            child: Column(
-              children: [
-                // Ruang untuk AppBar palsu dan konten atas (Nama/Avatar)
-                Padding(
-                  padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 20, top: 10),
-                        child: Text(
-                          "Your Profile",
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+      backgroundColor: lightPurpleBackground,
+      appBar: AppBar(
+        backgroundColor: primaryPurple,
+        title: const Text('Profile'),
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    CircleAvatar(
+                      radius: 50,
+                      backgroundColor: Colors.white,
+                      child: Icon(
+                        Icons.person,
+                        size: 80,
+                        color: primaryPurple,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildTextField(label: 'Full Name', controller: _fullNameController),
+                    _buildTextField(label: 'Gender (L/P)', controller: _genderController),
+                    _buildTextField(label: 'Birth Date (YYYY-MM-DD)', controller: _birthDateController),
+                    _buildTextField(label: 'Address', controller: _addressController),
+                    _buildTextField(label: 'Phone', controller: _phoneController, keyboardType: TextInputType.phone),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: _updateProfile,
+                        child: const Text('Update Profile'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryPurple,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                
-                const SizedBox(height: 20),
-
-                // Avatar and Name Section
-                CircleAvatar(
-                  radius: 50,
-                  backgroundColor: Colors.white,
-                  child: Icon( // Menggunakan ikon sebagai pengganti memoji
-                    Icons.person,
-                    size: 80,
-                    color: primaryPurple,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  userName,
-                  style: const TextStyle(
-                    fontSize: 22, 
-                    fontWeight: FontWeight.bold, 
-                    color: Colors.white
-                  ),
-                ),
-                Text(
-                  userRole,
-                  style: const TextStyle(
-                    fontSize: 16, 
-                    color: Colors.white70
-                  ),
-                ),
-                
-                const SizedBox(height: 24),
-
-                // Card Konten Utama (Informasi Detail)
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16.0),
-                  padding: const EdgeInsets.all(24.0),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20), // Sudut lebih melengkung
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      // Menggunakan widget kustom baru
-                      _buildTextFieldContainer(
-                        label: "Your Email",
-                        value: userEmail,
-                        icon: Icons.email_outlined,
-                      ),
-                      _buildTextFieldContainer(
-                        label: "Phone Number",
-                        value: userPhoneNumber,
-                        icon: Icons.call,
-                      ),
-                      _buildTextFieldContainer(
-                        label: "Website",
-                        value: userWebsite,
-                        icon: Icons.language,
-                      ),
-                      _buildTextFieldContainer(
-                        label: "Password",
-                        value: "password", // Nilai tidak ditampilkan
-                        icon: Icons.lock_outline,
-                        isPassword: true,
-                      ),
-                      
-                      // Menambahkan jarak di akhir kartu
-                      const SizedBox(height: 16),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 40),
-
-                // Logout Button Dihilangkan karena tidak ada di referensi gambar
-                // Jika ingin ditambahkan, bisa diletakkan di bawah sini.
-                
-                // ElevatedButton.icon( ... )
-                
-                const SizedBox(height: 50), // Jarak di bagian bawah
-              ],
+              ),
             ),
-          ),
-        ],
-      ),
     );
   }
 }

@@ -4,94 +4,162 @@ import 'module2_screen.dart';
 import 'module3_screen.dart';
 import 'module4_screen.dart';
 import 'static_lab_menu.dart';
+import 'package:physic_lab_app/screens/auth/login_screen.dart';
+import 'package:physic_lab_app/screens/auth/home_screen.dart'; // ⬅️ Tambahkan ini untuk navigasi ke HomeScreen
 
-// 🎨 Palet Warna
+// 🎨 Warna Tema Ceria
 const Color primaryColor = Color(0xFF4FC3F7);
-const Color backgroundColor = Color(0xFFE0FFFF);
-const Color cardColor = Color(0xFFB3E5FC);
-const Color textColor = Color(0xFF37474F);
+const Color backgroundColor = Color(0xFFE1F5FE);
+const Color cardColor = Colors.white;
+const Color textColor = Color(0xFF01579B);
 
-// 📘 Struktur data modul
+// 📘 Struktur Data Modul
 class Module {
   final String title;
   final String description;
   final IconData icon;
   final Color iconColor;
-  final String status;
-  final double? progress;
-  final String? duration;
+  final String duration;
 
-  Module({
+  const Module({
     required this.title,
     required this.description,
     required this.icon,
     required this.iconColor,
-    required this.status,
-    this.progress,
-    this.duration,
+    required this.duration,
   });
 }
 
-class ElectricityScreen extends StatelessWidget {
-  ElectricityScreen({super.key});
+class ElectricityScreen extends StatefulWidget {
+  final String userName;
 
-  // 📖 Daftar modul
-  final List<Module> modules = [
+  const ElectricityScreen({super.key, required this.userName});
+
+  @override
+  State<ElectricityScreen> createState() => _ElectricityScreenState();
+}
+
+class _ElectricityScreenState extends State<ElectricityScreen> {
+  int _selectedIndex = 1;
+
+  final List<Module> modules = const [
     Module(
-      title: 'Modul 1: Konsep Dasar Muatan Listrik',
-      description: 'Pengertian muatan listrik, hukum Coulomb, fenomena listrik statis.',
+      title: 'Modul 1: Konsep Dasar Muatan Listrik ⚡',
+      description:
+          'Pengertian muatan listrik, hukum Coulomb, dan fenomena listrik statis.',
       icon: Icons.electric_bolt,
       iconColor: Colors.orange,
-      status: 'Not Started',
-      progress: 0.0,
-      duration: '15 min',
+      duration: '10 menit',
     ),
     Module(
-      title: 'Modul 2: Interaksi Muatan',
+      title: 'Modul 2: Interaksi Muatan 🔋',
       description: 'Gaya tarik-menarik dan tolak-menolak antara muatan listrik.',
       icon: Icons.flash_on,
-      iconColor: Colors.red,
-      status: 'Not Started',
-      progress: 0.0,
-      duration: '10 min',
+      iconColor: Colors.redAccent,
+      duration: '12 menit',
     ),
     Module(
-      title: 'Modul 3: Medan Listrik',
+      title: 'Modul 3: Medan Listrik 🌈',
       description: 'Konsep medan listrik dan penerapannya pada elektroskop.',
-      icon: Icons.science,
+      icon: Icons.science_outlined,
       iconColor: Colors.green,
-      status: 'In Progress',
-      progress: 0.4,
-      duration: '20 min',
+      duration: '15 menit',
     ),
     Module(
-      title: 'Modul 4: Latihan dan Analisis',
+      title: 'Modul 4: Latihan dan Analisis 💡',
       description: 'Percobaan sederhana dan analisis hasil eksperimen listrik statis.',
       icon: Icons.assessment,
-      iconColor: Colors.blue,
-      status: 'Not Started',
-      progress: 0.0,
-      duration: '25 min',
+      iconColor: Colors.blueAccent,
+      duration: '8 menit',
     ),
   ];
 
+  // --- Helper ---
+  String getInitials(String name) {
+    List<String> parts = name.split(' ');
+    if (parts.isEmpty) return '?';
+    return parts.map((e) => e[0]).take(2).join().toUpperCase();
+  }
+
+  static void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Logout"),
+        content: const Text("Apakah kamu yakin ingin keluar?"),
+        actions: [
+          TextButton(
+            child: const Text("Batal"),
+            onPressed: () => Navigator.pop(context),
+          ),
+          TextButton(
+            child: const Text("Logout"),
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => LoginScreen()),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- Aksi ketika tombol navbar ditekan ---
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+
+    if (index == 0) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => HomeScreen(userName: widget.userName),
+        ),
+      );
+    } else if (index == 1) {
+      // tetap di ElectricityScreen (Modul)
+    } else if (index == 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Simulation belum tersedia')),
+      );
+    } else if (index == 3) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile belum tersedia')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    double overallProgress =
-        modules.fold(0.0, (sum, m) => sum + (m.progress ?? 0.0)) / modules.length;
-
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
         child: Column(
           children: [
             _buildHeader(context),
-            _buildProgressSection(overallProgress),
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text(
+                "Pelajari konsep listrik statis dengan cara yang menyenangkan! ⚡",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: textColor,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
             Expanded(
               child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
                 itemCount: modules.length,
-                itemBuilder: (context, index) => _buildAnimatedModuleCard(context, modules[index]),
+                itemBuilder: (context, index) {
+                  return _buildModuleCard(context, modules[index]);
+                },
               ),
             ),
           ],
@@ -102,28 +170,19 @@ class ElectricityScreen extends StatelessWidget {
     );
   }
 
-  // --- Header dengan gradient dan efek bayangan ---
   Widget _buildHeader(BuildContext context) {
+    String initials = getInitials(widget.userName);
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF4FC3F7), Color(0xFF81D4FA)],
+          colors: [primaryColor, Color(0xFF81D4FA)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black26,
-            offset: Offset(0, 3),
-            blurRadius: 8,
-          ),
-        ],
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
       ),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 18.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -134,49 +193,31 @@ class ElectricityScreen extends StatelessWidget {
           const Text(
             'Listrik Statis',
             style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
               color: Colors.white,
-            ),
-          ),
-          const CircleAvatar(
-            radius: 18,
-            backgroundColor: Colors.white24,
-            child: Icon(Icons.person_outline, color: Colors.white),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- Progress section dengan tampilan modern ---
-  Widget _buildProgressSection(double overallProgress) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Modul Praktikum Listrik Statis',
-            style: TextStyle(fontSize: 14, color: Colors.grey),
-          ),
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: overallProgress,
-              minHeight: 10,
-              backgroundColor: Colors.grey.shade300,
-              valueColor: const AlwaysStoppedAnimation(primaryColor),
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'Daftar Modul',
-            style: TextStyle(
-              fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: textColor,
+              fontSize: 20,
+            ),
+          ),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'Logout') {
+                _showLogoutDialog(context);
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 'Setting', child: Text('Setting')),
+              PopupMenuItem(value: 'Logout', child: Text('Logout')),
+            ],
+            child: CircleAvatar(
+              radius: 18,
+              backgroundColor: Colors.white,
+              child: Text(
+                initials,
+                style: const TextStyle(
+                  color: primaryColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
         ],
@@ -184,25 +225,8 @@ class ElectricityScreen extends StatelessWidget {
     );
   }
 
-  // --- Card Modul dengan efek animasi ---
-  Widget _buildAnimatedModuleCard(BuildContext context, Module module) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 600),
-      builder: (context, value, child) {
-        return Transform.translate(
-          offset: Offset(0, 20 * (1 - value)),
-          child: Opacity(opacity: value, child: child),
-        );
-      },
-      child: _buildModuleCard(context, module),
-    );
-  }
-
-  // --- Desain Card Modul ---
   Widget _buildModuleCard(BuildContext context, Module module) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(24),
+    return GestureDetector(
       onTap: () {
         if (module.title.contains('Modul 1')) {
           Navigator.push(context, MaterialPageRoute(builder: (_) => Module1Screen()));
@@ -214,68 +238,47 @@ class ElectricityScreen extends StatelessWidget {
           Navigator.push(context, MaterialPageRoute(builder: (_) => Module4Screen()));
         }
       },
-      child: Card(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: BorderSide(color: cardColor, width: 2),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+        margin: const EdgeInsets.only(bottom: 16.0),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              offset: const Offset(0, 4),
+              blurRadius: 10,
+            ),
+          ],
         ),
-        elevation: 3,
-        shadowColor: Colors.blue.shade100,
-        margin: const EdgeInsets.only(bottom: 16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: module.iconColor.withOpacity(0.15),
-                ),
-                child: Icon(module.icon, color: module.iconColor, size: 30),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      module.title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: textColor,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      module.description,
-                      style: const TextStyle(color: Colors.grey, fontSize: 14),
-                    ),
-                    const SizedBox(height: 8),
-                    if (module.status == 'In Progress')
-                      LinearProgressIndicator(
-                        value: module.progress,
-                        backgroundColor: Colors.grey.shade200,
-                        valueColor: AlwaysStoppedAnimation(module.iconColor),
-                        minHeight: 4,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    if (module.status == 'Not Started' && module.duration != null)
-                      Text('Durasi: ${module.duration}',
-                          style: const TextStyle(color: Colors.grey)),
-                  ],
-                ),
-              ),
-            ],
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          leading: CircleAvatar(
+            radius: 28,
+            backgroundColor: module.iconColor.withOpacity(0.2),
+            child: Icon(module.icon, color: module.iconColor, size: 30),
           ),
+          title: Text(
+            module.title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: textColor,
+            ),
+          ),
+          subtitle: Text(
+            module.description,
+            style: const TextStyle(fontSize: 13, color: Colors.black54),
+          ),
+          trailing:
+              const Icon(Icons.arrow_forward_ios_rounded, color: Colors.grey, size: 18),
         ),
       ),
     );
   }
 
-  // --- Tombol mengambang ke Lab Virtual ---
   Widget _buildFloatingLabButton(BuildContext context) {
     return FloatingActionButton.extended(
       onPressed: () {
@@ -290,21 +293,22 @@ class ElectricityScreen extends StatelessWidget {
     );
   }
 
-  // --- Bottom Navigation ---
+  // 🔹 BOTTOM NAVIGATION – SAMA DENGAN HOMESCREEN 🔹
   Widget _buildBottomNavigationBar() {
     return BottomNavigationBar(
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.menu_book_outlined), label: 'Theory'),
+        BottomNavigationBarItem(icon: Icon(Icons.menu_book_outlined), label: 'Modul'),
         BottomNavigationBarItem(icon: Icon(Icons.play_circle_outline), label: 'Simulation'),
         BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
       ],
-      currentIndex: 0,
+      currentIndex: _selectedIndex,
       selectedItemColor: primaryColor,
       unselectedItemColor: Colors.grey,
-      showUnselectedLabels: true,
       type: BottomNavigationBarType.fixed,
       backgroundColor: Colors.white,
+      onTap: _onItemTapped,
+      showUnselectedLabels: true,
     );
   }
 }
