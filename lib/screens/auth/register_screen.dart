@@ -36,7 +36,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse("http://127.0.0.1:8000/api/register"), 
+        Uri.parse("https://physiclab.my.id/api/register"), 
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "name": name,

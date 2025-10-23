@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -14,33 +15,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
 
-  // Controller untuk tiap field
+  String _gender = 'L';
+  DateTime? _birthDate;
+
   final TextEditingController _fullNameController = TextEditingController();
-  final TextEditingController _genderController = TextEditingController();
-  final TextEditingController _birthDateController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _loadProfileFromLocal(); // tampilkan data lokal dulu
-    _fetchProfile(); // fetch terbaru dari server
+    _loadProfileFromLocal();
+    _fetchProfile();
   }
 
-  // 1️⃣ Load data dari SharedPreferences
   Future<void> _loadProfileFromLocal() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _fullNameController.text = prefs.getString('full_name') ?? '';
-      _genderController.text = prefs.getString('gender') ?? '';
-      _birthDateController.text = prefs.getString('birth_date') ?? '';
+      _gender = prefs.getString('gender') ?? 'L';
+      final birthStr = prefs.getString('birth_date');
+      if (birthStr != null && birthStr.isNotEmpty) {
+        _birthDate = DateTime.tryParse(birthStr);
+      }
       _addressController.text = prefs.getString('address') ?? '';
       _phoneController.text = prefs.getString('phone') ?? '';
     });
   }
 
-  // 2️⃣ Fetch profile dari server
   Future<void> _fetchProfile() async {
     setState(() => _isLoading = true);
     final prefs = await SharedPreferences.getInstance();
@@ -48,7 +50,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:8000/api/profile'),
+        Uri.parse('https://physiclab.my.id/api/profile'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -56,35 +58,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final data = jsonDecode(response.body)['data'];
         setState(() {
           _fullNameController.text = data['full_name'] ?? '';
-          _genderController.text = data['gender'] ?? '';
-          _birthDateController.text = data['birth_date'] ?? '';
+          _gender = data['gender'] ?? 'L';
+          final birthStr = data['birth_date'];
+          if (birthStr != null && birthStr.isNotEmpty) {
+            _birthDate = DateTime.tryParse(birthStr);
+          }
           _addressController.text = data['address'] ?? '';
           _phoneController.text = data['phone'] ?? '';
         });
-
-        // Simpan lokal supaya tetap muncul saat balik ke screen
-        await prefs.setString('full_name', data['full_name'] ?? '');
-        await prefs.setString('gender', data['gender'] ?? '');
-        await prefs.setString('birth_date', data['birth_date'] ?? '');
-        await prefs.setString('address', data['address'] ?? '');
-        await prefs.setString('phone', data['phone'] ?? '');
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal mengambil data profile')),
-        );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: $e')));
     }
 
     setState(() => _isLoading = false);
   }
 
-  // 3️⃣ Update profile
   Future<void> _updateProfile() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_birthDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pilih tanggal lahir dulu')),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
     final prefs = await SharedPreferences.getInstance();
@@ -92,25 +90,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:8000/api/profile'),
+        Uri.parse('https://physiclab.my.id/api/profile'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
           'full_name': _fullNameController.text,
-          'gender': _genderController.text,
-          'birth_date': _birthDateController.text,
+          'gender': _gender,
+          'birth_date': DateFormat('yyyy-MM-dd').format(_birthDate!),
           'address': _addressController.text,
           'phone': _phoneController.text,
         }),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Update SharedPreferences juga
         await prefs.setString('full_name', _fullNameController.text);
-        await prefs.setString('gender', _genderController.text);
-        await prefs.setString('birth_date', _birthDateController.text);
+        await prefs.setString('gender', _gender);
+        await prefs.setString(
+            'birth_date', DateFormat('yyyy-MM-dd').format(_birthDate!));
         await prefs.setString('address', _addressController.text);
         await prefs.setString('phone', _phoneController.text);
 
@@ -123,67 +121,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: $e')));
     }
 
     setState(() => _isLoading = false);
   }
 
-  // 4️⃣ Build textfield reusable
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    bool isPassword = false,
-    TextInputType keyboardType = TextInputType.text,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.grey.shade700,
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 4),
-        TextFormField(
-          controller: controller,
-          obscureText: isPassword,
-          keyboardType: keyboardType,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Colors.grey.shade100,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide.none,
-            ),
-          ),
-          validator: (value) {
-            if (!isPassword && (value == null || value.isEmpty)) {
-              return '$label tidak boleh kosong';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 16),
-      ],
+  Future<void> _pickBirthDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _birthDate ?? DateTime(2005, 1, 1),
+      firstDate: DateTime(1995),
+      lastDate: DateTime.now(),
     );
+    if (picked != null) setState(() => _birthDate = picked);
   }
 
   @override
   Widget build(BuildContext context) {
-    const Color primaryPurple = Color(0xFF4FC3F7);
-    const Color lightPurpleBackground = Color(0xFFF3E5F5);
+    const Color primaryColor = Color(0xFF42A5F5);
+    const Color lightBackground = Color(0xFFE3F2FD);
 
     return Scaffold(
-      backgroundColor: lightPurpleBackground,
+      backgroundColor: lightBackground,
       appBar: AppBar(
-        backgroundColor: primaryPurple,
-        title: const Text('Profile'),
+        backgroundColor: primaryColor,
+        title: const Text('Profil Kamu'),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -193,32 +157,119 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 key: _formKey,
                 child: Column(
                   children: [
+                    // Avatar
                     CircleAvatar(
                       radius: 50,
-                      backgroundColor: Colors.white,
-                      child: Icon(
-                        Icons.person,
-                        size: 80,
-                        color: primaryPurple,
+                      backgroundColor:
+                          _gender == 'L' ? Colors.blue.shade100 : Colors.pink.shade100,
+                      child: Text(
+                        _gender == 'L' ? '👦' : '👧',
+                        style: const TextStyle(fontSize: 50),
                       ),
                     ),
                     const SizedBox(height: 12),
-                    _buildTextField(label: 'Full Name', controller: _fullNameController),
-                    _buildTextField(label: 'Gender (L/P)', controller: _genderController),
-                    _buildTextField(label: 'Birth Date (YYYY-MM-DD)', controller: _birthDateController),
-                    _buildTextField(label: 'Address', controller: _addressController),
-                    _buildTextField(label: 'Phone', controller: _phoneController, keyboardType: TextInputType.phone),
-                    const SizedBox(height: 20),
+
+                    // Nama lengkap
+                    TextFormField(
+                      controller: _fullNameController,
+                      decoration: InputDecoration(
+                        labelText: 'Nama Lengkap',
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      validator: (value) =>
+                          value == null || value.isEmpty ? 'Nama wajib diisi' : null,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Jenis kelamin
+                    DropdownButtonFormField<String>(
+                      value: _gender,
+                      decoration: InputDecoration(
+                        labelText: 'Jenis Kelamin',
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'L', child: Text('Laki-laki')),
+                        DropdownMenuItem(value: 'P', child: Text('Perempuan')),
+                      ],
+                      onChanged: (value) => setState(() => _gender = value!),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Tanggal lahir
+                    TextFormField(
+                      readOnly: true,
+                      decoration: InputDecoration(
+                        labelText: 'Tanggal Lahir',
+                        filled: true,
+                        fillColor: Colors.white,
+                        suffixIcon: const Icon(Icons.calendar_today),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onTap: _pickBirthDate,
+                      controller: TextEditingController(
+                        text: _birthDate != null
+                            ? DateFormat('yyyy-MM-dd').format(_birthDate!)
+                            : '',
+                      ),
+                      validator: (value) =>
+                          value == null || value.isEmpty ? 'Pilih tanggal lahir' : null,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Alamat
+                    TextFormField(
+                      controller: _addressController,
+                      decoration: InputDecoration(
+                        labelText: 'Alamat',
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Nomor HP
+                    TextFormField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        labelText: 'Nomor HP',
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Tombol update
                     SizedBox(
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton(
                         onPressed: _updateProfile,
-                        child: const Text('Update Profile'),
+                        child: const Text(
+                          'Update Profil',
+                          style: TextStyle(fontSize: 18),
+                        ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryPurple,
+                          backgroundColor: primaryColor,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(16),
                           ),
                         ),
                       ),

@@ -290,6 +290,7 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
 
   // ================= LOGIKA ARUS LISTRIK (VIR) =================
   void _updateCurrentFlow() {
+    // Reset semua node & komponen
     for (var node in _nodes.values) node.currentFlow = false;
     for (var comp in _components.values) {
       if (comp.type == ComponentType.lamp || comp.type == ComponentType.switchComponent) {
@@ -297,6 +298,7 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
       }
     }
 
+    // Cari baterai
     CircuitComponent? batteryComp;
     for (final c in _components.values) {
       if (c.type == ComponentType.battery) {
@@ -304,30 +306,33 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
         break;
       }
     }
-
     if (batteryComp == null) return;
 
-    final startNodeId = batteryComp.startNodeId;
-    _propagateCurrent(startNodeId, <String>{});
-
-    // ========== Tambahan Perhitungan VIR ==========
-    _totalVoltage = batteryComp.value ?? 0;
-    _totalResistance = 0.0;
+    // Perhitungan arus untuk rangkaian seri
+    double totalResistance = 0;
+    bool circuitBroken = false;
 
     for (final comp in _components.values) {
-      if (comp.type == ComponentType.lamp && comp.isConnected) {
-        _totalResistance += comp.value ?? 0;
+      // Jika lampu atau saklar OFF → arus berhenti
+      if ((comp.type == ComponentType.lamp || comp.type == ComponentType.switchComponent) && !comp.isConnected) {
+        circuitBroken = true;
+        break;
       }
+      if (comp.type == ComponentType.lamp) totalResistance += comp.value ?? 0;
     }
 
-    if (_totalResistance > 0) {
-      _current = _totalVoltage / _totalResistance;
-    } else {
-      _current = 0.0;
+    _totalVoltage = batteryComp.value ?? 0;
+    _totalResistance = circuitBroken ? double.infinity : totalResistance;
+    _current = _totalResistance.isFinite ? _totalVoltage / _totalResistance : 0;
+
+    // Propagasi arus: nyala hanya jika arus > 0
+    if (_current > 0) {
+      _propagateCurrent(batteryComp.startNodeId, <String>{});
     }
 
     setState(() {});
   }
+
 
   void _propagateCurrent(String nodeId, Set<String> visitedNodes) {
     if (visitedNodes.contains(nodeId)) return;
@@ -654,56 +659,41 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
   }
 
   Widget _buildDraggableComponent(String componentId, Widget child) {
-  return GestureDetector(
-    // Ketika user tap/klik komponen — kita toggle koneksi (untuk lampu/saklar)
-    onTap: () {
-      final comp = _components[componentId];
-      if (comp != null) {
-        if (comp.type == ComponentType.switchComponent) {
-          _toggleComponentConnection(componentId);
-        } else if (comp.type == ComponentType.lamp) {
-          _turnOffAllLamps(); // Semua lampu mati saat diklik
-        }
-      }
-    },
-
-    // (sekali lagi) kalau mau long-press untuk hapus, tinggal buka komentar berikut:
-    // onLongPress: () async {
-    //   final confirm = await showDialog<bool>(
-    //     context: context,
-    //     builder: (context) => AlertDialog(
-    //       title: const Text("Hapus Komponen"),
-    //       content: const Text("Apakah kamu yakin ingin menghapus komponen ini?"),
-    //       actions: [
-    //         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Batal")),
-    //         TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Hapus")),
-    //       ],
-    //     ),
-    //   );
-    //   if (confirm == true) _deleteComponent(componentId);
-    // },
-
-    onPanStart: (details) {
-      if (!_isConnectingMode) {
-        setState(() => _currentlyDraggingComponentId = componentId);
-      }
-    },
-    onPanUpdate: (details) {
-      if (_currentlyDraggingComponentId == componentId) {
-        setState(() {
-          final comp = _components[componentId];
-          if (comp != null) {
-            _nodes[comp.startNodeId]?.position += details.delta;
-            _nodes[comp.endNodeId]?.position += details.delta;
-            _updateCurrentFlow();
+    return GestureDetector(
+      onTap: () {
+        final comp = _components[componentId];
+        if (comp != null) {
+          if (comp.type == ComponentType.switchComponent) {
+            // Toggle saklar
+            _toggleComponentConnection(componentId);
+          } else if (comp.type == ComponentType.lamp) {
+            // Toggle lampu sendiri → putus atau sambung
+            comp.isConnected = !comp.isConnected;
+            _updateCurrentFlow(); // otomatis hitung arus, efek seri terjadi
           }
-        });
-      }
-    },
-    onPanEnd: (_) => setState(() => _currentlyDraggingComponentId = null),
-    child: child,
-  );
-}
+        }
+      },
+      onPanStart: (details) {
+        if (!_isConnectingMode) {
+          setState(() => _currentlyDraggingComponentId = componentId);
+        }
+      },
+      onPanUpdate: (details) {
+        if (_currentlyDraggingComponentId == componentId) {
+          setState(() {
+            final comp = _components[componentId];
+            if (comp != null) {
+              _nodes[comp.startNodeId]?.position += details.delta;
+              _nodes[comp.endNodeId]?.position += details.delta;
+              _updateCurrentFlow();
+            }
+          });
+        }
+      },
+      onPanEnd: (_) => setState(() => _currentlyDraggingComponentId = null),
+      child: child,
+    );
+  }
 
   Widget _buildSimpleSwitch(CircuitComponent switchComp) {
     final isOn = switchComp.isConnected;

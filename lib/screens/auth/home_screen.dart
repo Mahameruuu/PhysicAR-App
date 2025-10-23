@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'login_screen.dart';
 import '../home/profile_screen.dart';
+import '../home/simulation_screen.dart';
 import '../modules/electricity/electricity_selection_screen.dart';
+
 
 class HomeScreen extends StatefulWidget {
   final String userName;
@@ -22,7 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _widgetOptions = <Widget>[
       _HomeContent(userName: widget.userName),
-      const Center(child: Text('Simulation Screen', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold))),
+      const SimulationScreen(),
       ProfileScreen(),
     ];
   }

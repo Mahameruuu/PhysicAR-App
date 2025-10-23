@@ -30,8 +30,8 @@ class _LoginScreenState extends State<LoginScreen> {
       scopes: ['email', 'profile'],
     );
 
-  final loginUrl = 'http://127.0.0.1:8000/api/login';
-  final googleLoginUrl = 'http://127.0.0.1:8000/api/auth/google';
+  final loginUrl = 'https://physiclab.my.id/api/login';
+  final googleLoginUrl = 'https://physiclab.my.id/api/auth/google';
 
   void login() async {
     final email = _emailController.text.trim();
