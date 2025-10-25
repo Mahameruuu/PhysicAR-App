@@ -345,7 +345,6 @@ class _ExperimentCanvasState extends State<ExperimenCanvas> with TickerProviderS
   }
 
   // ================= WIDGET UTAMA =================
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -361,36 +360,32 @@ class _ExperimentCanvasState extends State<ExperimenCanvas> with TickerProviderS
           return Column(
             children: [
               Expanded(
-                child: Row(
-                  children: [
-                    _buildToolPanel(),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 12),
-                            const Padding(
-                              padding: EdgeInsets.all(10.0),
-                              child: Text(
-                                "Rangkaian Kustom",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 24,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                            ),
-                            _buildCustomCircuit(),
-                            const SizedBox(height: 20),
-                            _buildARButton(),
-                            const SizedBox(height: 20),
-                          ],
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      const Padding(
+                        padding: EdgeInsets.all(10.0),
+                        child: Text(
+                          "Rangkaian Kustom",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 24,
+                            color: Colors.black87,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                      _buildCustomCircuit(),
+                      const SizedBox(height: 20),
+                      _buildARButton(),
+                      const SizedBox(height: 10),
+                    ],
+                  ),
                 ),
               ),
+
+              // 🔧 TOOLBAR BAWAH (ganti sidebar)
+              _buildToolPanel(),
 
               // =========== PANEL VISUAL VIR ===========
               Container(
@@ -419,9 +414,8 @@ class _ExperimentCanvasState extends State<ExperimenCanvas> with TickerProviderS
   // ================= TOOL PANEL =================
   Widget _buildToolPanel() {
     return Container(
-      width: 110,
-      height: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 6),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [Colors.blue.shade50, Colors.blue.shade100],
@@ -432,46 +426,32 @@ class _ExperimentCanvasState extends State<ExperimenCanvas> with TickerProviderS
           BoxShadow(
             color: Colors.grey.withOpacity(0.3),
             blurRadius: 6,
-            offset: const Offset(2, 2),
+            offset: const Offset(0, -2),
           ),
         ],
         borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(12),
           topRight: Radius.circular(12),
-          bottomRight: Radius.circular(12),
         ),
       ),
-      child: Column(
-        children: [
-          _buildToolButton(Icons.lightbulb_outline, 'Lampu', ComponentType.lamp),
-          _buildToolButton(Icons.battery_full, 'Baterai', ComponentType.battery),
-          _buildToolButton(Icons.power_settings_new, 'Saklar', ComponentType.switchComponent),
-          _buildToolButton(Icons.cable, 'Kabel', ComponentType.wire),
-          const Spacer(),
-          // _buildIconButton(Icons.delete, 'Hapus Semua', Colors.red, () async {
-          //   final confirm = await showDialog<bool>(
-          //     context: context,
-          //     builder: (context) => AlertDialog(
-          //       title: const Text("Hapus Semua Komponen"),
-          //       content: const Text("Apakah kamu yakin ingin menghapus semua komponen?"),
-          //       actions: [
-          //         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Batal")),
-          //         TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Hapus")),
-          //       ],
-          //     ),
-          //   );
-          //   if (confirm == true) {
-          //     setState(() {
-          //       _components.clear();
-          //       _nodes.clear();
-          //       _updateCurrentFlow();
-          //     });
-          //   }
-          // }),
-          const SizedBox(height: 8),
-          _buildIconButton(Icons.clear_all, 'Reset Sirkuit', Colors.blue, () {
-            _initializeDefaultCircuit();
-          }),
-        ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildToolButton(Icons.lightbulb_outline, 'Lampu', ComponentType.lamp),
+            const SizedBox(width: 16),
+            _buildToolButton(Icons.battery_full, 'Baterai', ComponentType.battery),
+            const SizedBox(width: 16),
+            _buildToolButton(Icons.power_settings_new, 'Saklar', ComponentType.switchComponent),
+            const SizedBox(width: 16),
+            _buildToolButton(Icons.cable, 'Kabel', ComponentType.wire),
+            const SizedBox(width: 16),
+            _buildIconButton(Icons.clear_all, 'Reset', Colors.blue, () {
+              _initializeDefaultCircuit();
+            }),
+          ],
+        ),
       ),
     );
   }

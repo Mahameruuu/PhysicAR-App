@@ -166,7 +166,7 @@ class _HomeContent extends StatelessWidget {
                     case 1:
                       return _buildFancyMenu(
                         context,
-                        'Listrik Dinamis',
+                        'Listrik',
                         'Pelajari arus dan rangkaian listrik',
                         Icons.bolt_rounded,
                         Colors.blueAccent,
