@@ -221,15 +221,23 @@ class _ExperimentCanvasState extends State<ExperimenCanvas> with TickerProviderS
   }
 
   void _toggleComponentConnection(String componentId) {
+    final comp = _components[componentId];
+    if (comp == null) return;
+
     setState(() {
-      final comp = _components[componentId];
-      if (comp != null && (comp.type == ComponentType.switchComponent || comp.type == ComponentType.lamp)) {
-        comp.isConnected = !comp.isConnected;
+      switch (comp.type) {
+        case ComponentType.lamp:
+          comp.isConnected = !comp.isConnected; // lampu putus/nyala
+          break;
+        case ComponentType.switchComponent:
+          comp.isConnected = !comp.isConnected; // saklar ON/OFF
+          break;
+        default:
+          break;
       }
       _updateCurrentFlow();
     });
   }
-
 
   // ================= HAPUS KOMPONEN (SATUAN) =================
   void _deleteComponent(String componentId) {
@@ -342,6 +350,19 @@ class _ExperimentCanvasState extends State<ExperimenCanvas> with TickerProviderS
 
     for (final connectedNodeId in node.connectedTo) {
       _propagateCurrent(connectedNodeId, visitedNodes);
+    }
+  }
+
+  void _handleConnectingMode(String nodeId) {
+    if (_firstSelectedNodeId == null) {
+      setState(() => _firstSelectedNodeId = nodeId);
+    } else if (_firstSelectedNodeId != nodeId) {
+      _connectNodesThroughVirtualNode(_firstSelectedNodeId!, nodeId);
+      setState(() {
+        _isConnectingMode = false;
+        _firstSelectedNodeId = null;
+        _updateCurrentFlow();
+      });
     }
   }
 
@@ -546,7 +567,6 @@ class _ExperimentCanvasState extends State<ExperimenCanvas> with TickerProviderS
             ),
           ],
         ),
-        // Tambahkan InteractiveViewer agar bisa di-zoom & scroll
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: InteractiveViewer(
@@ -557,7 +577,7 @@ class _ExperimentCanvasState extends State<ExperimenCanvas> with TickerProviderS
             child: GestureDetector(
               onTapUp: (details) => _handleCanvasTap(details.localPosition),
               child: SizedBox(
-                width: 2000, // area kerja luas
+                width: 2000,
                 height: 2000,
                 child: Stack(
                   children: [
@@ -572,7 +592,47 @@ class _ExperimentCanvasState extends State<ExperimenCanvas> with TickerProviderS
                       ),
                     ),
 
-                    // ============ Komponen =============
+                    // ============ Titik start/end node tiap komponen ============
+                    ..._components.values.map((comp) {
+                      final startNode = _nodes[comp.startNodeId];
+                      final endNode = _nodes[comp.endNodeId];
+                      if (startNode == null || endNode == null) return const SizedBox.shrink();
+
+                      return Stack(
+                        children: [
+                          // // Titik startNode
+                          // Positioned(
+                          //   left: startNode.position.dx - 6,
+                          //   top: startNode.position.dy - 6,
+                          //   child: Container(
+                          //     width: 12,
+                          //     height: 12,
+                          //     decoration: BoxDecoration(
+                          //       color: Colors.blue, // startNode = biru
+                          //       shape: BoxShape.circle,
+                          //       border: Border.all(color: Colors.black, width: 1),
+                          //     ),
+                          //   ),
+                          // ),
+                          // // Titik endNode
+                          // Positioned(
+                          //   left: endNode.position.dx - 6,
+                          //   top: endNode.position.dy - 6,
+                          //   child: Container(
+                          //     width: 12,
+                          //     height: 12,
+                          //     decoration: BoxDecoration(
+                          //       color: Colors.green, // endNode = hijau
+                          //       shape: BoxShape.circle,
+                          //       border: Border.all(color: Colors.black, width: 1),
+                          //     ),
+                          //   ),
+                          // ),
+                        ],
+                      );
+                    }),
+
+                    // ============ Komponen ============
                     ..._components.values.map((comp) {
                       final startNode = _nodes[comp.startNodeId];
                       final endNode = _nodes[comp.endNodeId];
@@ -602,7 +662,7 @@ class _ExperimentCanvasState extends State<ExperimenCanvas> with TickerProviderS
                       );
                     }),
 
-                    // ============ Node =============
+                    // ============ Node virtual/transparan ============
                     ..._nodes.values
                         .where((node) => _findComponentByNodeId(node.id) == null)
                         .map((node) {
@@ -639,52 +699,44 @@ class _ExperimentCanvasState extends State<ExperimenCanvas> with TickerProviderS
   }
 
   Widget _buildDraggableComponent(String componentId, Widget child) {
-  return GestureDetector(
-    // Ketika user tap/klik komponen — kita toggle koneksi (untuk lampu/saklar)
-    onTap: () {
-      final comp = _components[componentId];
-      if (comp != null && (comp.type == ComponentType.switchComponent || comp.type == ComponentType.lamp)) {
-        _toggleComponentConnection(componentId);
-      }
-    },
+    return GestureDetector(
+      // Klik untuk toggle efek atau koneksi
+      onTap: () {
+        final comp = _components[componentId];
+        if (comp == null) return;
 
-    // (sekali lagi) kalau mau long-press untuk hapus, tinggal buka komentar berikut:
-    // onLongPress: () async {
-    //   final confirm = await showDialog<bool>(
-    //     context: context,
-    //     builder: (context) => AlertDialog(
-    //       title: const Text("Hapus Komponen"),
-    //       content: const Text("Apakah kamu yakin ingin menghapus komponen ini?"),
-    //       actions: [
-    //         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Batal")),
-    //         TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Hapus")),
-    //       ],
-    //     ),
-    //   );
-    //   if (confirm == true) _deleteComponent(componentId);
-    // },
-
-    onPanStart: (details) {
-      if (!_isConnectingMode) {
-        setState(() => _currentlyDraggingComponentId = componentId);
-      }
-    },
-    onPanUpdate: (details) {
-      if (_currentlyDraggingComponentId == componentId) {
-        setState(() {
-          final comp = _components[componentId];
-          if (comp != null) {
-            _nodes[comp.startNodeId]?.position += details.delta;
-            _nodes[comp.endNodeId]?.position += details.delta;
-            _updateCurrentFlow();
+        if (_isConnectingMode) {
+          // Mode menghubungkan kabel
+          _handleConnectingMode(comp.startNodeId); // ambil startNodeId otomatis
+        } else {
+          // Mode normal: toggle efek komponen
+          if (comp.type == ComponentType.lamp || comp.type == ComponentType.switchComponent) {
+            _toggleComponentConnection(componentId);
           }
-        });
-      }
-    },
-    onPanEnd: (_) => setState(() => _currentlyDraggingComponentId = null),
-    child: child,
-  );
-}
+        }
+      },
+
+      onPanStart: (details) {
+        if (!_isConnectingMode) {
+          setState(() => _currentlyDraggingComponentId = componentId);
+        }
+      },
+      onPanUpdate: (details) {
+        if (_currentlyDraggingComponentId == componentId) {
+          setState(() {
+            final comp = _components[componentId];
+            if (comp != null) {
+              _nodes[comp.startNodeId]?.position += details.delta;
+              _nodes[comp.endNodeId]?.position += details.delta;
+              _updateCurrentFlow();
+            }
+          });
+        }
+      },
+      onPanEnd: (_) => setState(() => _currentlyDraggingComponentId = null),
+      child: child,
+    );
+  }
 
   Widget _buildSimpleSwitch(CircuitComponent switchComp) {
     final isOn = switchComp.isConnected;
