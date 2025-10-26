@@ -2,21 +2,23 @@ import 'package:flutter/material.dart';
 
 class LampWidget extends StatelessWidget {
   final bool isLit;
-  final double brightnessFactor; // 0.0 - 1.0
+  final double brightnessFactor;
+  final Color color;             
 
   const LampWidget({
-    super.key,
+    Key? key,
     required this.isLit,
     this.brightnessFactor = 1.0,
-  });
+    this.color = Colors.yellow,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    // Warna utama lampu (dinamis)
     final Color lightColor = isLit
-        ? Color.lerp(Colors.orange, Colors.yellow, brightnessFactor)!
+        ? color.withOpacity(brightnessFactor.clamp(0.0, 1.0))
         : Colors.grey[300]!;
 
-    // Glow ketika lampu menyala
     final List<BoxShadow> shadows = isLit
         ? [
             BoxShadow(
@@ -56,7 +58,7 @@ class LampWidget extends StatelessWidget {
               width: 12,
               height: 20,
               decoration: BoxDecoration(
-                color: isLit ? Colors.orangeAccent : Colors.grey[600],
+                color: isLit ? lightColor : Colors.grey[600],
                 borderRadius: BorderRadius.circular(3),
               ),
             ),

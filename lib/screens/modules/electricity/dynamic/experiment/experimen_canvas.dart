@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'components/battery_widget.dart';
 import 'components/lamp_widget.dart';
 import 'components/ar_view_screen.dart';
+import 'widgets/effects.dart';
 
 // ============== MODEL DAN ENUM ==============
 enum ComponentType { battery, lamp, switchComponent, wire }
@@ -344,6 +345,23 @@ class _ExperimentCanvasState extends State<ExperimenCanvas> with TickerProviderS
     }
   }
 
+  Color _getLampColor(CircuitComponent lamp) {
+    if (!lamp.isConnected) return Colors.grey; // kabel putus atau saklar mati
+
+    final current = _current;
+
+    if (current > 2.0) return Colors.red; // overcurrent / lampu “rusak”
+    if (!lamp.isWorking) return Colors.red;   // lampu tidak menyala (misal putus)
+
+    if (current < 0.3) {
+      return Colors.yellow.shade300; // arus kecil, lampu redup
+    } else if (current < 1.0) {
+      return Colors.orange;           // arus sedang
+    } else {
+      return Colors.green;            // arus kuat, lampu terang/hijau
+    }
+  }
+
   // ================= WIDGET UTAMA =================
   Widget build(BuildContext context) {
     return Scaffold(
@@ -384,7 +402,6 @@ class _ExperimentCanvasState extends State<ExperimenCanvas> with TickerProviderS
                 ),
               ),
 
-              // 🔧 TOOLBAR BAWAH (ganti sidebar)
               _buildToolPanel(),
 
               // =========== PANEL VISUAL VIR ===========
@@ -691,18 +708,39 @@ class _ExperimentCanvasState extends State<ExperimenCanvas> with TickerProviderS
   // ================= WIDGET LAMPU + SLIDER =================
   Widget _buildInteractiveLamp(CircuitComponent lamp) {
     final isLit = lamp.isWorking && lamp.isConnected;
+    final lampColor = _getLampColor(lamp);
+    final isOvercurrent = _current > 2.0;
+
     return Column(
       children: [
-        LampWidget(
-          isLit: isLit,
-          brightnessFactor: isLit ? 1.0 : 0.15,
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            LampWidget(
+              isLit: isLit,
+              brightnessFactor: isLit ? 1.0 : 0.15,
+              color: lampColor,  
+            ),
+            if (isOvercurrent) ...[
+              FireEffect(active: true),
+              ExplosionEffect(),
+            ],
+          ],
         ),
         if (!lamp.isConnected)
-          const Text('PUTUS', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
+          const Text(
+            'PUTUS',
+            style: TextStyle(
+              color: Colors.red,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
         _buildComponentSlider(lamp),
       ],
     );
   }
+
 
   Widget _buildInteractiveBattery(CircuitComponent battery) {
     return Column(
@@ -754,6 +792,73 @@ class _ExperimentCanvasState extends State<ExperimenCanvas> with TickerProviderS
       label: const Text("Lihat dalam AR", style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
     );
   }
+}
+
+class FireEffect extends StatefulWidget {
+  final bool active;
+  const FireEffect({super.key, required this.active});
+
+  @override
+  State<FireEffect> createState() => _FireEffectState();
+}
+
+class _FireEffectState extends State<FireEffect> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Opacity(
+          opacity: widget.active ? (_controller.value * 0.8 + 0.2) : 0,
+          child: CustomPaint(
+            size: const Size(40, 40),
+            painter: FirePainter(_controller.value),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class FirePainter extends CustomPainter {
+  final double progress;
+  FirePainter(this.progress);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..style = PaintingStyle.fill;
+    final center = Offset(size.width/2, size.height/2);
+
+    for (int i = 0; i < 5; i++) {
+      final offsetY = center.dy - progress * 20 - i * 4;
+      final offsetX = center.dx + (i % 2 == 0 ? -3.0 : 3.0) * i;
+      paint.shader = RadialGradient(
+        colors: [Colors.red, Colors.orange, Colors.yellow.withOpacity(0)],
+        stops: const [0, 0.5, 1],
+      ).createShader(Rect.fromCircle(center: Offset(offsetX, offsetY), radius: 8 + i * 2));
+      canvas.drawCircle(Offset(offsetX, offsetY), 8 + i.toDouble(), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant FirePainter oldDelegate) => true;
 }
 
 // ============== CUSTOM PAINTER KABEL DENGAN WARNA ARUS ==============
