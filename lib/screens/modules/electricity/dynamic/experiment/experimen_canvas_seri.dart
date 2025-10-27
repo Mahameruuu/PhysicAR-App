@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'components/battery_widget.dart';
 import 'components/lamp_widget.dart';
 import 'components/ar_view_screen.dart';
+import 'widgets/effects.dart';
 
 // ============== MODEL DAN ENUM ==============
 enum ComponentType { battery, lamp, switchComponent, wire }
@@ -241,7 +242,6 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
     });
   }
 
-
   // ================= HAPUS KOMPONEN (SATUAN) =================
   void _deleteComponent(String componentId) {
     setState(() {
@@ -333,7 +333,6 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
     setState(() {});
   }
 
-
   void _propagateCurrent(String nodeId, Set<String> visitedNodes) {
     if (visitedNodes.contains(nodeId)) return;
     visitedNodes.add(nodeId);
@@ -361,8 +360,37 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
     }
   }
 
+  void _handleConnectingMode(String nodeId) {
+    if (_firstSelectedNodeId == null) {
+      setState(() => _firstSelectedNodeId = nodeId);
+    } else if (_firstSelectedNodeId != nodeId) {
+      _connectNodesThroughVirtualNode(_firstSelectedNodeId!, nodeId);
+      setState(() {
+        _isConnectingMode = false;
+        _firstSelectedNodeId = null;
+        _updateCurrentFlow();
+      });
+    }
+  }
+
+  Color _getLampColor(CircuitComponent lamp) {
+    if (!lamp.isConnected) return Colors.grey; // kabel putus atau saklar mati
+
+    final current = _current;
+
+    if (current > 2.0) return Colors.red; // overcurrent / lampu “rusak”
+    if (!lamp.isWorking) return Colors.red;   // lampu tidak menyala (misal putus)
+
+    if (current < 0.3) {
+      return Colors.yellow.shade300; // arus kecil, lampu redup
+    } else if (current < 1.0) {
+      return Colors.orange;           // arus sedang
+    } else {
+      return Colors.green;            // arus kuat, lampu terang/hijau
+    }
+  }
+
   // ================= WIDGET UTAMA =================
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -378,36 +406,31 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
           return Column(
             children: [
               Expanded(
-                child: Row(
-                  children: [
-                    _buildToolPanel(),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 12),
-                            const Padding(
-                              padding: EdgeInsets.all(10.0),
-                              child: Text(
-                                "Rangkaian Kustom",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 24,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                            ),
-                            _buildCustomCircuit(),
-                            const SizedBox(height: 20),
-                            _buildARButton(),
-                            const SizedBox(height: 20),
-                          ],
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      const Padding(
+                        padding: EdgeInsets.all(10.0),
+                        child: Text(
+                          "Rangkaian Kustom",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 24,
+                            color: Colors.black87,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                      _buildCustomCircuit(),
+                      const SizedBox(height: 20),
+                      _buildARButton(),
+                      const SizedBox(height: 10),
+                    ],
+                  ),
                 ),
               ),
+
+              _buildToolPanel(),
 
               // =========== PANEL VISUAL VIR ===========
               Container(
@@ -433,12 +456,12 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
     );
   }
 
+
   // ================= TOOL PANEL =================
   Widget _buildToolPanel() {
     return Container(
-      width: 110,
-      height: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 6),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [Colors.blue.shade50, Colors.blue.shade100],
@@ -449,46 +472,32 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
           BoxShadow(
             color: Colors.grey.withOpacity(0.3),
             blurRadius: 6,
-            offset: const Offset(2, 2),
+            offset: const Offset(0, -2),
           ),
         ],
         borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(12),
           topRight: Radius.circular(12),
-          bottomRight: Radius.circular(12),
         ),
       ),
-      child: Column(
-        children: [
-          _buildToolButton(Icons.lightbulb_outline, 'Lampu', ComponentType.lamp),
-          _buildToolButton(Icons.battery_full, 'Baterai', ComponentType.battery),
-          _buildToolButton(Icons.power_settings_new, 'Saklar', ComponentType.switchComponent),
-          _buildToolButton(Icons.cable, 'Kabel', ComponentType.wire),
-          const Spacer(),
-          // _buildIconButton(Icons.delete, 'Hapus Semua', Colors.red, () async {
-          //   final confirm = await showDialog<bool>(
-          //     context: context,
-          //     builder: (context) => AlertDialog(
-          //       title: const Text("Hapus Semua Komponen"),
-          //       content: const Text("Apakah kamu yakin ingin menghapus semua komponen?"),
-          //       actions: [
-          //         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Batal")),
-          //         TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Hapus")),
-          //       ],
-          //     ),
-          //   );
-          //   if (confirm == true) {
-          //     setState(() {
-          //       _components.clear();
-          //       _nodes.clear();
-          //       _updateCurrentFlow();
-          //     });
-          //   }
-          // }),
-          const SizedBox(height: 8),
-          _buildIconButton(Icons.clear_all, 'Reset Sirkuit', Colors.blue, () {
-            _initializeDefaultCircuit();
-          }),
-        ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildToolButton(Icons.lightbulb_outline, 'Lampu', ComponentType.lamp),
+            const SizedBox(width: 16),
+            _buildToolButton(Icons.battery_full, 'Baterai', ComponentType.battery),
+            const SizedBox(width: 16),
+            _buildToolButton(Icons.power_settings_new, 'Saklar', ComponentType.switchComponent),
+            const SizedBox(width: 16),
+            _buildToolButton(Icons.cable, 'Kabel', ComponentType.wire),
+            const SizedBox(width: 16),
+            _buildIconButton(Icons.clear_all, 'Reset', Colors.blue, () {
+              _initializeDefaultCircuit();
+            }),
+          ],
+        ),
       ),
     );
   }
@@ -566,7 +575,6 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
             ),
           ],
         ),
-        // Tambahkan InteractiveViewer agar bisa di-zoom & scroll
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: InteractiveViewer(
@@ -577,7 +585,7 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
             child: GestureDetector(
               onTapUp: (details) => _handleCanvasTap(details.localPosition),
               child: SizedBox(
-                width: 2000, // area kerja luas
+                width: 2000,
                 height: 2000,
                 child: Stack(
                   children: [
@@ -592,7 +600,47 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
                       ),
                     ),
 
-                    // ============ Komponen =============
+                    // ============ Titik start/end node tiap komponen ============
+                    ..._components.values.map((comp) {
+                      final startNode = _nodes[comp.startNodeId];
+                      final endNode = _nodes[comp.endNodeId];
+                      if (startNode == null || endNode == null) return const SizedBox.shrink();
+
+                      return Stack(
+                        children: [
+                          // // Titik startNode
+                          // Positioned(
+                          //   left: startNode.position.dx - 6,
+                          //   top: startNode.position.dy - 6,
+                          //   child: Container(
+                          //     width: 12,
+                          //     height: 12,
+                          //     decoration: BoxDecoration(
+                          //       color: Colors.blue, // startNode = biru
+                          //       shape: BoxShape.circle,
+                          //       border: Border.all(color: Colors.black, width: 1),
+                          //     ),
+                          //   ),
+                          // ),
+                          // // Titik endNode
+                          // Positioned(
+                          //   left: endNode.position.dx - 6,
+                          //   top: endNode.position.dy - 6,
+                          //   child: Container(
+                          //     width: 12,
+                          //     height: 12,
+                          //     decoration: BoxDecoration(
+                          //       color: Colors.green, // endNode = hijau
+                          //       shape: BoxShape.circle,
+                          //       border: Border.all(color: Colors.black, width: 1),
+                          //     ),
+                          //   ),
+                          // ),
+                        ],
+                      );
+                    }),
+
+                    // ============ Komponen ============
                     ..._components.values.map((comp) {
                       final startNode = _nodes[comp.startNodeId];
                       final endNode = _nodes[comp.endNodeId];
@@ -622,7 +670,7 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
                       );
                     }),
 
-                    // ============ Node =============
+                    // ============ Node virtual/transparan ============
                     ..._nodes.values
                         .where((node) => _findComponentByNodeId(node.id) == null)
                         .map((node) {
@@ -660,19 +708,22 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
 
   Widget _buildDraggableComponent(String componentId, Widget child) {
     return GestureDetector(
+      // Klik untuk toggle efek atau koneksi
       onTap: () {
         final comp = _components[componentId];
-        if (comp != null) {
-          if (comp.type == ComponentType.switchComponent) {
-            // Toggle saklar
+        if (comp == null) return;
+
+        if (_isConnectingMode) {
+          // Mode menghubungkan kabel
+          _handleConnectingMode(comp.startNodeId); // ambil startNodeId otomatis
+        } else {
+          // Mode normal: toggle efek komponen
+          if (comp.type == ComponentType.lamp || comp.type == ComponentType.switchComponent) {
             _toggleComponentConnection(componentId);
-          } else if (comp.type == ComponentType.lamp) {
-            // Toggle lampu sendiri → putus atau sambung
-            comp.isConnected = !comp.isConnected;
-            _updateCurrentFlow(); // otomatis hitung arus, efek seri terjadi
           }
         }
       },
+
       onPanStart: (details) {
         if (!_isConnectingMode) {
           setState(() => _currentlyDraggingComponentId = componentId);
@@ -717,14 +768,34 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
   // ================= WIDGET LAMPU + SLIDER =================
   Widget _buildInteractiveLamp(CircuitComponent lamp) {
     final isLit = lamp.isWorking && lamp.isConnected;
+    final lampColor = _getLampColor(lamp); // tambahkan ini
+    final isOvercurrent = _current > 2.0; // arus > 2A dianggap overcurrent
+
     return Column(
       children: [
-        LampWidget(
-          isLit: isLit,
-          brightnessFactor: isLit ? 1.0 : 0.15,
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            LampWidget(
+              isLit: isLit,
+              brightnessFactor: isLit ? 1.0 : 0.15,
+              color: lampColor, // gunakan warna dari getLampColor
+            ),
+            if (isOvercurrent) ...[
+              FireEffect(active: true),
+              ExplosionEffect(),
+            ],
+          ],
         ),
         if (!lamp.isConnected)
-          const Text('PUTUS', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
+          const Text(
+            'PUTUS',
+            style: TextStyle(
+              color: Colors.red,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
         _buildComponentSlider(lamp),
       ],
     );
@@ -780,6 +851,65 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri> with TickerProvi
       label: const Text("Lihat dalam AR", style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
     );
   }
+}
+
+class _FireEffectState extends State<FireEffect> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Opacity(
+          opacity: widget.active ? (_controller.value * 0.8 + 0.2) : 0,
+          child: CustomPaint(
+            size: const Size(40, 40),
+            painter: FirePainter(_controller.value),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class FirePainter extends CustomPainter {
+  final double progress;
+  FirePainter(this.progress);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..style = PaintingStyle.fill;
+    final center = Offset(size.width/2, size.height/2);
+
+    for (int i = 0; i < 5; i++) {
+      final offsetY = center.dy - progress * 20 - i * 4;
+      final offsetX = center.dx + (i % 2 == 0 ? -3.0 : 3.0) * i;
+      paint.shader = RadialGradient(
+        colors: [Colors.red, Colors.orange, Colors.yellow.withOpacity(0)],
+        stops: const [0, 0.5, 1],
+      ).createShader(Rect.fromCircle(center: Offset(offsetX, offsetY), radius: 8 + i * 2));
+      canvas.drawCircle(Offset(offsetX, offsetY), 8 + i.toDouble(), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant FirePainter oldDelegate) => true;
 }
 
 // ============== CUSTOM PAINTER KABEL DENGAN WARNA ARUS ==============
