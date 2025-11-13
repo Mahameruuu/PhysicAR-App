@@ -87,7 +87,6 @@ final response = await http.get(Uri.parse('$baseUrl/users'));
 ```
 
 👨‍💻 Kontributor
+
 Frontend Developer: [M. Mahameru. A]
-
 Framework: Flutter
-
