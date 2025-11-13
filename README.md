@@ -86,7 +86,7 @@ Contoh konfigurasi:
 final response = await http.get(Uri.parse('$baseUrl/users'));
 ```
 
-👨‍💻 Kontributor
+## 👨‍💻 Kontributor
 
-Frontend Developer: [M. Mahameru. A]
+Frontend Developer: [M. Mahameru. A] <br>
 Framework: Flutter
