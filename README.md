@@ -38,7 +38,9 @@ flutter pub get
 
 3️⃣ Konfigurasi API Endpoint
 Ubah base URL API Laravel di file konfigurasi (misalnya lib/config/api.dart):
+```bash
 const String baseUrl = "http://localhost:8000/api";
+```
 
 4️⃣ Jalankan Aplikasi
 ```bash
@@ -88,3 +90,4 @@ final response = await http.get(Uri.parse('$baseUrl/users'));
 Frontend Developer: [M. Mahameru. A]
 
 Framework: Flutter
+
