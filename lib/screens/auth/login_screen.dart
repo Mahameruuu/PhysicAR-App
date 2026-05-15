@@ -6,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'home_screen.dart';
 import 'register_screen.dart';
-import '../../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -22,6 +21,20 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   bool _isLoading = false;
   bool _rememberMe = true;
+
+  // DUMMY USERS (2 AKUN)
+  final List<Map<String, String>> _dummyUsers = [
+    {
+      "email": "tes@gmail.com",
+      "password": "123456",
+      "name": "Admin PhysicAR",
+    },
+    {
+      "email": "user@physicar.com",
+      "password": "123456",
+      "name": "Student Lab",
+    },
+  ];
 
   @override
   void dispose() {
@@ -42,26 +55,30 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final result = await AuthService.instance.login(
-        email: email,
-        password: password,
+      await Future.delayed(const Duration(milliseconds: 700)); // fake API
+
+  
+      // CHECK DUMMY LOGIN
+  
+      final user = _dummyUsers.where(
+        (u) => u["email"] == email && u["password"] == password,
       );
 
-      if (result.success && result.user != null) {
+      if (user.isNotEmpty) {
+        final name = user.first["name"]!;
+
         Fluttertoast.showToast(msg: 'Login berhasil!');
 
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
 
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => HomeScreen(userName: result.user!.name),
+            builder: (_) => HomeScreen(userName: name),
           ),
         );
       } else {
-        Fluttertoast.showToast(msg: result.message ?? 'Login gagal!');
+        Fluttertoast.showToast(msg: 'Email atau password salah!');
       }
     } catch (e) {
       Fluttertoast.showToast(msg: 'Terjadi kesalahan: $e');
@@ -74,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> loginWithGoogle() async {
     Fluttertoast.showToast(
-      msg: 'Login Google tidak tersedia pada mode autentikasi lokal.',
+      msg: 'Login Google tidak tersedia pada mode lokal.',
       backgroundColor: Colors.black87,
       textColor: Colors.white,
     );

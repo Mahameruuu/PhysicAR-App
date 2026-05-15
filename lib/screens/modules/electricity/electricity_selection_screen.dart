@@ -1,16 +1,14 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:physic_lab_app/layouts/main_scaffold.dart';
 import 'package:physic_lab_app/screens/auth/home_screen.dart';
-import 'package:physic_lab_app/screens/auth/login_screen.dart';
 import 'package:physic_lab_app/screens/home/profile_screen.dart';
 import 'package:physic_lab_app/screens/modules/electricity/dynamic/electricity_screen.dart';
-import 'package:physic_lab_app/services/auth_service.dart';
 
 import 'static/electricity_screen.dart';
 
 const Color primaryColor = Color(0xFF4FC3F7);
-const Color backgroundColor = Color(0xFFF3FAFF);
 const Color textColor = Color(0xFF37474F);
 const Color secondaryTextColor = Color(0xFF64748B);
 
@@ -29,8 +27,6 @@ class ElectricitySelectionScreen extends StatefulWidget {
 
 class _ElectricitySelectionScreenState
     extends State<ElectricitySelectionScreen> {
-  int _selectedIndex = 1;
-
   late final List<_ElectricityModuleItem> _modules;
 
   @override
@@ -58,15 +54,7 @@ class _ElectricitySelectionScreenState
     ];
   }
 
-  void _onItemTapped(int index) {
-    if (index == _selectedIndex) {
-      return;
-    }
-
-    setState(() {
-      _selectedIndex = index;
-    });
-
+  void _handleNavigationTap(int index) {
     switch (index) {
       case 0:
         Navigator.pushReplacement(
@@ -89,137 +77,41 @@ class _ElectricitySelectionScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      body: Stack(
+    return MainScaffold(
+      userName: widget.userName,
+      currentIndex: 1,
+      onTapNav: _handleNavigationTap,
+
+      // tetap pakai padding kamu
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
+
+      child: Stack(
         children: [
-          const _ElectricityBackground(),
-          SafeArea(
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: 1),
-              duration: const Duration(milliseconds: 850),
-              curve: Curves.easeOutCubic,
-              builder: (context, value, child) {
-                return Opacity(
-                  opacity: value,
-                  child: Transform.translate(
-                    offset: Offset(0, 28 * (1 - value)),
-                    child: child,
-                  ),
-                );
-              },
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(context),
-                    const SizedBox(height: 24),
-                    _buildHeroPanel(),
-                    const SizedBox(height: 22),
-                    _buildSectionHeader(),
-                    const SizedBox(height: 16),
-                    ..._modules.map(
-                      (module) => Padding(
-                        padding: EdgeInsets.only(
-                          bottom: module == _modules.last ? 0 : 18,
-                        ),
-                        child: _buildSelectionButton(context, module),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          // 🌈 background tetap di sini (tidak sentuh MainScaffold)
+          const Positioned.fill(
+            child: _ElectricityBackground(),
           ),
+
+          // 📦 content utama dipisah jelas
+          _buildContent(),
         ],
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    final initials = getInitials(widget.userName);
-
-    return Row(
+  Widget _buildContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _GlassIconButton(
-          icon: Icons.arrow_back_rounded,
-          onTap: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => HomeScreen(userName: widget.userName),
-              ),
-            );
-          },
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Hello, explorer',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF6B7A90),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                widget.userName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: textColor,
-                ),
-              ),
-            ],
-          ),
-        ),
-        PopupMenuButton<String>(
-          onSelected: (value) {
-            if (value == 'Logout') {
-              _showLogoutDialog(context);
-            }
-          },
-          itemBuilder: (context) => const [
-            PopupMenuItem(value: 'Setting', child: Text('Setting')),
-            PopupMenuItem(value: 'Logout', child: Text('Logout')),
-          ],
-          child: Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              gradient: const LinearGradient(
-                colors: [Color(0xFF76D7FF), Color(0xFF4DA8FF)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x334FC3F7),
-                  blurRadius: 20,
-                  offset: Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Center(
-              child: Text(
-                initials,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
-                ),
-              ),
-            ),
+        _buildHeroPanel(),
+        const SizedBox(height: 22),
+        _buildSectionHeader(),
+        const SizedBox(height: 16),
+
+        ..._modules.map(
+          (module) => Padding(
+            padding: const EdgeInsets.only(bottom: 18),
+            child: _buildSelectionButton(context, module),
           ),
         ),
       ],
@@ -353,85 +245,6 @@ class _ElectricitySelectionScreenState
       },
     );
   }
-
-  Widget _buildBottomNavigationBar() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(18, 0, 18, 18),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x140F172A),
-            blurRadius: 20,
-            offset: Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _NavItem(
-            icon: Icons.home_rounded,
-            label: 'Home',
-            active: _selectedIndex == 0,
-            onTap: () => _onItemTapped(0),
-          ),
-          _NavItem(
-            icon: Icons.play_circle_outline_rounded,
-            label: 'Simulation',
-            active: _selectedIndex == 1,
-            onTap: () => _onItemTapped(1),
-          ),
-          _NavItem(
-            icon: Icons.person_outline_rounded,
-            label: 'Profile',
-            active: _selectedIndex == 2,
-            onTap: () => _onItemTapped(2),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Apakah Anda yakin ingin logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              await AuthService.instance.logout();
-              if (!context.mounted) {
-                return;
-              }
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-              );
-            },
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String getInitials(String name) {
-    final parts = name.trim().split(' ').where((part) => part.isNotEmpty).toList();
-    if (parts.isEmpty) {
-      return '?';
-    }
-    return parts.map((item) => item[0]).take(2).join().toUpperCase();
-  }
 }
 
 class _ElectricityModuleItem {
@@ -518,37 +331,6 @@ class _BackgroundOrb extends StatelessWidget {
               color,
               color.withValues(alpha: 0),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GlassIconButton extends StatelessWidget {
-  const _GlassIconButton({
-    required this.icon,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Material(
-          color: Colors.white.withValues(alpha: 0.62),
-          child: InkWell(
-            onTap: onTap,
-            child: SizedBox(
-              width: 52,
-              height: 52,
-              child: Icon(icon, color: textColor),
-            ),
           ),
         ),
       ),
@@ -758,57 +540,6 @@ class _SelectionCardState extends State<_SelectionCard> {
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: active
-              ? const Color(0xFF58C1F5).withValues(alpha: 0.14)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: active ? const Color(0xFF48B8F2) : const Color(0xFFAAB3C2),
-              size: 22,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                color: active ? const Color(0xFF48B8F2) : const Color(0xFFAAB3C2),
-              ),
-            ),
-          ],
         ),
       ),
     );

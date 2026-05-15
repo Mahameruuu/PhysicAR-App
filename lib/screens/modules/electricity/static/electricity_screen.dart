@@ -156,12 +156,6 @@ class _ElectricityScreenState extends State<ElectricityScreen> {
     }
   }
 
-  // =========================
-  // TAMBAHKAN METHOD INI
-  // LETAKKAN DI DALAM
-  // class _ElectricityScreenState
-  // =========================
-
   void _showQuizDialog(BuildContext context) {
   showDialog(
     context: context,
@@ -217,10 +211,7 @@ class _ElectricityScreenState extends State<ElectricityScreen> {
 
                   const SizedBox(height: 22),
 
-                  // =========================
                   // TITLE
-                  // =========================
-
                   const Text(
                     "Mulai Quiz?",
                     style: TextStyle(
@@ -232,10 +223,7 @@ class _ElectricityScreenState extends State<ElectricityScreen> {
 
                   const SizedBox(height: 12),
 
-                  // =========================
                   // DESCRIPTION
-                  // =========================
-
                   const Text(
                     "Quiz terdiri dari 10 soal pilihan ganda dengan durasi 30 menit. Pastikan kamu sudah memahami materi sebelum memulai.",
                     textAlign: TextAlign.center,
@@ -248,10 +236,7 @@ class _ElectricityScreenState extends State<ElectricityScreen> {
 
                   const SizedBox(height: 26),
 
-                  // =========================
                   // BUTTONS
-                  // =========================
-
                   Row(
                     children: [
                       Expanded(
@@ -326,9 +311,7 @@ class _ElectricityScreenState extends State<ElectricityScreen> {
   );
 }
 
-// =========================
 // LAB DIALOG
-// =========================
 
 void _showLabDialog(BuildContext context) {
   showDialog(

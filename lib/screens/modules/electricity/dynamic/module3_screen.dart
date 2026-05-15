@@ -1,138 +1,219 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 
 const Color primaryColor = Color(0xFF4FC3F7);
-const Color backgroundColor = Color(0xFFE0FFFF);
-const Color textColor = Color(0xFF37474F);
+const Color backgroundColor = Color(0xFFE1F5FE);
 
-class Module3Screen extends StatelessWidget {
+class Module3Screen extends StatefulWidget {
   const Module3Screen({super.key});
+
+  @override
+  State<Module3Screen> createState() => _Module3ScreenState();
+}
+
+class _Module3ScreenState extends State<Module3Screen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundColor,
-      appBar: AppBar(
-        backgroundColor: primaryColor,
-        title: const Text('Modul 3: Medan Listrik'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
-        ),
-        elevation: 6,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ListView(
-          physics: const BouncingScrollPhysics(),
-          children: [
-            // Tujuan Modul
-            _buildSectionCard(
-              title: 'Tujuan Modul',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text('- Memahami konsep medan listrik.'),
-                  Text('- Menjelaskan arah dan garis gaya medan listrik.'),
-                  Text('- Menentukan kuat medan listrik dari satu dan beberapa muatan.'),
-                  Text('- Menghubungkan konsep potensial listrik dengan energi listrik.'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
+      body: Stack(
+        children: [
+          const _BackgroundGlow(),
 
-            // Materi Pembelajaran
-            _buildSectionCard(
-              title: 'Materi Pembelajaran',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildExpandableTopic(
-                    title: '1. Pengertian Medan Listrik',
-                    content:
-                        'Medan listrik adalah daerah di sekitar muatan listrik di mana muatan lain mengalami gaya listrik.\n\n'
-                        '🔹 Setiap muatan listrik menghasilkan medan listrik.\n'
-                        '🔹 Medan listrik digambarkan dengan garis-garis gaya yang menunjukkan arah dan kekuatan medan.\n\n'
-                        'Arah garis gaya keluar dari muatan positif dan masuk ke muatan negatif.',
-                    imageUrl:
-                        'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Electric_Field_Lines_Positive_Charge.svg/512px-Electric_Field_Lines_Positive_Charge.svg.png',
+          SafeArea(
+            child: Column(
+              children: [
+                _buildHeader(context),
+
+                Expanded(
+                  child: FadeTransition(
+                    opacity: _controller,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.08),
+                        end: Offset.zero,
+                      ).animate(
+                        CurvedAnimation(
+                          parent: _controller,
+                          curve: Curves.easeOutCubic,
+                        ),
+                      ),
+                      child: ListView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                        children: [
+                          _sectionCard(
+                            title: "Tujuan Modul",
+                            child: const Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('- Memahami konsep medan listrik.'),
+                                Text('- Menjelaskan arah dan garis gaya medan listrik.'),
+                                Text('- Menentukan kuat medan listrik dari satu dan beberapa muatan.'),
+                                Text('- Menghubungkan konsep potensial listrik dengan energi listrik.'),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 18),
+
+                          _sectionCard(
+                            title: "Materi Pembelajaran",
+                            child: Column(
+                              children: const [
+                                _Topic(
+                                  title: '1. Pengertian Medan Listrik',
+                                  content:
+                                      'Medan listrik adalah daerah di sekitar muatan listrik di mana muatan lain mengalami gaya listrik.\n\n'
+                                      '🔹 Setiap muatan listrik menghasilkan medan listrik.\n'
+                                      '🔹 Medan listrik digambarkan dengan garis-garis gaya yang menunjukkan arah dan kekuatan medan.\n\n'
+                                      'Arah garis gaya keluar dari muatan positif dan masuk ke muatan negatif.',
+                                ),
+
+                                _Topic(
+                                  title: '2. Kuat Medan Listrik (E)',
+                                  content:
+                                      'Kuat medan listrik menyatakan besar gaya listrik pada muatan uji.\n\n'
+                                      'E = F / q\n'
+                                      'E = k × (Q / r²)\n\n'
+                                      'E = kuat medan listrik\n'
+                                      'F = gaya listrik\n'
+                                      'q = muatan uji\n'
+                                      'Q = muatan sumber\n'
+                                      'r = jarak',
+                                ),
+
+                                _Topic(
+                                  title: '3. Garis Gaya Medan Listrik',
+                                  content:
+                                      '• Tidak pernah berpotongan\n'
+                                      '• Keluar dari muatan positif dan masuk ke negatif\n'
+                                      '• Kerapatan garis menunjukkan kuat medan\n\n'
+                                      'Muatan sejenis saling tolak, berbeda jenis saling tarik.',
+                                ),
+
+                                _Topic(
+                                  title: '4. Medan Listrik oleh Beberapa Muatan',
+                                  content:
+                                      'E total = E1 + E2 + E3 + ...\n\n'
+                                      'Menggunakan prinsip superposisi vektor.',
+                                ),
+
+                                _Topic(
+                                  title: '5. Potensial Listrik',
+                                  content:
+                                      'Potensial listrik adalah energi listrik per satuan muatan.\n\n'
+                                      'V = k × (Q / r)\n\n'
+                                      'V = potensial listrik\n'
+                                      'Q = muatan sumber\n'
+                                      'r = jarak',
+                                ),
+
+                                _Topic(
+                                  title: '6. Energi Potensial Listrik',
+                                  content:
+                                      'Energi potensial listrik adalah energi akibat posisi muatan dalam medan listrik.\n\n'
+                                      'U = q × V\n\n'
+                                      'U = energi potensial\n'
+                                      'q = muatan\n'
+                                      'V = potensial listrik',
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  _buildExpandableTopic(
-                    title: '2. Kuat Medan Listrik (E)',
-                    content:
-                        'Kuat medan listrik menyatakan besar gaya listrik yang bekerja pada muatan uji positif di titik tertentu.\n\n'
-                        '🔹 Rumus:\nE = F / q\natau\nE = k × (Q / r²)\n\n'
-                        'Keterangan:\n• E = kuat medan listrik (N/C)\n• F = gaya listrik (N)\n• q = muatan uji (C)\n• Q = muatan sumber (C)\n• r = jarak antar muatan (m)\n\n'
-                        'Semakin dekat ke muatan sumber, medan listrik semakin kuat.',
-                    imageUrl:
-                        'https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/Electric_Field_1_Charge.svg/512px-Electric_Field_1_Charge.svg.png',
-                  ),
-                  _buildExpandableTopic(
-                    title: '3. Garis Gaya Medan Listrik',
-                    content:
-                        'Garis gaya listrik menggambarkan arah medan listrik dan interaksi antara muatan.\n\n'
-                        'Ciri-ciri garis gaya:\n• Garis tidak pernah berpotongan.\n• Keluar dari muatan positif dan masuk ke muatan negatif.\n• Kerapatan garis menunjukkan besar kuat medan listrik.\n\n'
-                        'Jika dua muatan sejenis, garis saling menolak; jika berbeda jenis, garis saling menarik.',
-                    imageUrl:
-                        'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Electric_field_due_to_two_opposite_charges.svg/512px-Electric_field_due_to_two_opposite_charges.svg.png',
-                  ),
-                  _buildExpandableTopic(
-                    title: '4. Medan Listrik oleh Beberapa Muatan',
-                    content:
-                        'Jika ada lebih dari satu muatan, kuat medan total di suatu titik adalah jumlah vektor dari medan tiap muatan.\n\n'
-                        '🔹 Secara matematis:\nE_total = E₁ + E₂ + E₃ + ...\n\n'
-                        'Arah dan besar resultan medan listrik ditentukan dengan prinsip superposisi.',
-                    imageUrl:
-                        'https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/Electric_field_due_to_two_equal_charges.svg/512px-Electric_field_due_to_two_equal_charges.svg.png',
-                  ),
-                  _buildExpandableTopic(
-                    title: '5. Potensial Listrik',
-                    content:
-                        'Potensial listrik menunjukkan energi listrik yang dimiliki muatan di suatu titik akibat adanya medan listrik.\n\n'
-                        '🔹 Rumus:\nV = k × (Q / r)\n\n'
-                        'Keterangan:\n• V = potensial listrik (Volt)\n• Q = muatan sumber (C)\n• r = jarak dari sumber (m)\n\n'
-                        'Perbedaan potensial antara dua titik menyebabkan arus listrik mengalir.',
-                    imageUrl:
-                        'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Electric_potential_field.svg/512px-Electric_potential_field.svg.png',
-                  ),
-                  _buildExpandableTopic(
-                    title: '6. Energi Potensial Listrik',
-                    content:
-                        'Energi potensial listrik adalah energi yang dimiliki suatu muatan karena posisinya dalam medan listrik.\n\n'
-                        '🔹 Rumus:\nU = q × V\n\n'
-                        'Keterangan:\n• U = energi potensial (Joule)\n• q = muatan (C)\n• V = potensial listrik (Volt)\n\n'
-                        'Energi ini dapat berubah menjadi energi kinetik saat muatan bergerak.',
-                    imageUrl:
-                        'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Electric_field_and_potential.svg/512px-Electric_field_and_potential.svg.png',
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  // --- Section Card dengan efek lembut ---
-  Widget _buildSectionCard({required String title, required Widget child}) {
+  // ================= HEADER (SAMA SEMUA MODULE)
+  Widget _buildHeader(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF36BFFA), Color(0xFF60A5FA)],
+        ),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x334FC3F7),
+            blurRadius: 20,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+          ),
+          const Expanded(
+            child: Column(
+              children: [
+                Text("Module 3",
+                    style: TextStyle(color: Colors.white70, fontSize: 12)),
+                SizedBox(height: 4),
+                Text(
+                  "Medan Listrik",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 40),
+        ],
+      ),
+    );
+  }
+
+  // ================= SECTION CARD
+  Widget _sectionCard({required String title, required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF4FC3F7), Color(0xFF81D4FA)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(26),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            offset: const Offset(0, 5),
+            color: Colors.black.withOpacity(0.08),
             blurRadius: 12,
-          ),
+            offset: const Offset(0, 6),
+          )
         ],
       ),
       child: Column(
@@ -141,75 +222,96 @@ class Module3Screen extends StatelessWidget {
           Text(
             title,
             style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
               color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           child,
         ],
       ),
     );
   }
+}
 
-  // --- Expandable Topic dengan radius & gambar opsional ---
-  Widget _buildExpandableTopic({
-    required String title,
-    String? content,
-    String? imageUrl,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14.0),
-      child: Card(
-        elevation: 3,
-        shadowColor: Colors.black.withOpacity(0.1),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(22),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(22),
-          child: ExpansionTile(
-            collapsedBackgroundColor: Colors.white,
-            backgroundColor: Colors.white,
-            collapsedIconColor: primaryColor,
-            iconColor: primaryColor,
-            tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            childrenPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            title: Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            children: [
-              if (imageUrl != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(18),
-                    child: Image.network(
-                      imageUrl,
-                      fit: BoxFit.contain,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(8.0),
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  content ?? '',
-                  style: const TextStyle(fontSize: 15, height: 1.5),
-                ),
-              ),
-            ],
+// ================= TOPIC (SAMA STYLE MODULE 1 & 2)
+class _Topic extends StatelessWidget {
+  final String title;
+  final String content;
+
+  const _Topic({required this.title, required this.content});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 14),
+        childrenPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 15,
           ),
+        ),
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              content,
+              style: const TextStyle(height: 1.6, fontSize: 14),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ================= BACKGROUND GLOW
+class _BackgroundGlow extends StatelessWidget {
+  const _BackgroundGlow();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned(
+          top: -80,
+          left: -80,
+          child: _orb(200, const Color(0x334FC3F7)),
+        ),
+        Positioned(
+          bottom: -80,
+          right: -60,
+          child: _orb(220, const Color(0x224FC3F7)),
+        ),
+      ],
+    );
+  }
+
+  Widget _orb(double size, Color color) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [color, Colors.transparent],
         ),
       ),
     );

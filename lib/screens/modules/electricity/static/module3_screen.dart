@@ -1,14 +1,36 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 const Color primaryColor = Color(0xFF4FC3F7);
-const Color backgroundColor = Color(0xFFE0FFFF);
-const Color textColor = Color(0xFF37474F);
+const Color backgroundColor = Color(0xFFE1F5FE);
+const Color textColor = Color(0xFF01579B);
 const Color secondaryTextColor = Color(0xFF607086);
 
-class Module3Screen extends StatelessWidget {
+class Module3Screen extends StatefulWidget {
   const Module3Screen({super.key});
+
+  @override
+  State<Module3Screen> createState() => _Module3ScreenState();
+}
+
+class _Module3ScreenState extends State<Module3Screen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,99 +38,76 @@ class Module3Screen extends StatelessWidget {
       backgroundColor: backgroundColor,
       body: Stack(
         children: [
-          const _ModuleBackground(),
+          const _BackgroundGlow(),
+
           SafeArea(
             child: Column(
               children: [
-                _buildHeader(context, 'Modul 3: Medan Listrik'),
+                _buildHeader(context, "Module 3: Medan Listrik"),
+
                 Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 18, 16, 20),
-                    child: ListView(
-                      physics: const BouncingScrollPhysics(),
-                      children: [
-                        _buildSectionCard(
-                          title: 'Tujuan Modul',
-                          icon: Icons.track_changes_rounded,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              _BulletText('Memahami konsep medan listrik dan arah garis gaya listrik'),
-                              _BulletText('Menghubungkan medan listrik dengan gaya pada muatan uji'),
-                              _BulletText('Memahami hubungan medan listrik dengan energi dan potensial'),
-                              _BulletText('Melakukan pengamatan sederhana terhadap medan listrik'),
-                            ],
+                  child: FadeTransition(
+                    opacity: _controller,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.08),
+                        end: Offset.zero,
+                      ).animate(_controller),
+                      child: ListView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                        children: [
+                          _sectionCard(
+                            title: "Tujuan Modul",
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: const [
+                                _BulletText('Memahami konsep medan listrik'),
+                                _BulletText('Menjelaskan garis gaya listrik'),
+                                _BulletText('Menghubungkan medan listrik dengan gaya Coulomb'),
+                                _BulletText('Melakukan observasi sederhana medan listrik'),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 22),
-                        _buildSectionCard(
-                          title: 'Materi Pembelajaran',
-                          icon: Icons.menu_book_rounded,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildExpandableTopic(
-                                title: '1. Definisi Medan Listrik',
-                                content:
-                                    'Medan listrik adalah daerah di sekitar muatan listrik yang masih dipengaruhi gaya listrik.\n\n'
-                                    'Arah garis gaya listrik keluar dari muatan positif dan masuk ke muatan negatif.\n\n'
-                                    'Rumus kuat medan listrik:\nE = F / q\n'
-                                    'Keterangan:\nE = kuat medan listrik (N/C)\nF = gaya listrik (N)\nq = besar muatan uji (C).',
-                              ),
-                              _buildExpandableTopic(
-                                title: '2. Garis Gaya Listrik',
-                                content:
-                                    'Garis imajiner ini menunjukkan arah dan besar medan listrik.\n\n'
-                                    'Semakin rapat garis, medan semakin kuat.\n'
-                                    'Semakin renggang garis, medan semakin lemah.\n\n'
-                                    'Contohnya dapat dilihat pada medan di sekitar muatan tunggal, dipol listrik, atau dua muatan berlawanan.',
-                              ),
-                              _buildExpandableTopic(
-                                title: '3. Medan Listrik dan Hukum Coulomb',
-                                content:
-                                    'Medan listrik berkaitan erat dengan gaya Coulomb.\n\n'
-                                    'Rumus hubungan antara keduanya:\nF = q x E\n\n'
-                                    'Artinya, gaya listrik yang dialami sebuah muatan uji berbanding lurus dengan kuat medan listrik di titik tersebut.',
-                              ),
-                              _buildExpandableTopicWithWidget(
-                                title: '4. Ilustrasi Medan Listrik',
-                                contentWidget: Column(
-                                  children: [
-                                    const SizedBox(height: 8),
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(18),
-                                      child: Image.asset(
-                                        'assets/images/muatan-listrik.png',
-                                        fit: BoxFit.contain,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 10),
-                                    const Text(
-                                      'Gambar: Garis gaya listrik di sekitar muatan tunggal',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontStyle: FontStyle.italic,
-                                        color: secondaryTextColor,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ],
+                          const SizedBox(height: 18),
+
+                          _sectionCard(
+                            title: "Materi Pembelajaran",
+                            child: Column(
+                              children: const [
+                                _Topic(
+                                  title: "1. Definisi Medan Listrik",
+                                  content:
+                                      "Medan listrik adalah daerah di sekitar muatan yang masih dipengaruhi gaya listrik.\n\n"
+                                      "E = F / q\n\n"
+                                      "E = kuat medan listrik (N/C)\nF = gaya listrik\nq = muatan uji",
                                 ),
-                              ),
-                              _buildExpandableTopic(
-                                title: '5. Percobaan Sederhana Medan Listrik',
-                                content:
-                                    'Gunakan elektroskop atau balon bermuatan untuk mendeteksi arah medan listrik.\n\n'
-                                    '1. Siapkan balon bermuatan dan benda netral.\n'
-                                    '2. Dekatkan balon ke benda tersebut.\n'
-                                    '3. Amati gaya tarik atau tolak yang terjadi.\n'
-                                    '4. Bandingkan hasil pengamatan dengan teori E = F / q.\n\n'
-                                    'Percobaan ini menunjukkan bahwa medan listrik nyata dapat diamati melalui efek gaya yang ditimbulkannya.',
-                              ),
-                            ],
+                                _Topic(
+                                  title: "2. Garis Gaya Listrik",
+                                  content:
+                                      "Garis gaya menunjukkan arah medan listrik.\n\n"
+                                      "Semakin rapat garis → medan semakin kuat.\n"
+                                      "Semakin renggang → medan semakin lemah.",
+                                ),
+                                _Topic(
+                                  title: "3. Medan & Hukum Coulomb",
+                                  content:
+                                      "F = q × E\n\n"
+                                      "Gaya listrik bergantung pada medan listrik di titik tersebut.",
+                                ),
+                                _Topic(
+                                  title: "4. Percobaan Medan Listrik",
+                                  content:
+                                      "1. Gunakan balon bermuatan\n"
+                                      "2. Dekatkan ke benda netral\n"
+                                      "3. Amati gaya tarik\n\n"
+                                      "Ini membuktikan adanya medan listrik.",
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -120,285 +119,192 @@ class Module3Screen extends StatelessWidget {
     );
   }
 
+  // ================= HEADER (CONSISTENT)
   Widget _buildHeader(BuildContext context, String title) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF53C8F8), Color(0xFF3B82F6)],
+          colors: [Color(0xFF36BFFA), Color(0xFF60A5FA)],
         ),
         borderRadius: BorderRadius.circular(28),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x284DA8FF),
-            blurRadius: 24,
-            offset: Offset(0, 12),
+            color: Color(0x334FC3F7),
+            blurRadius: 20,
+            offset: Offset(0, 10),
           ),
         ],
       ),
       child: Row(
         children: [
-          Material(
-            color: Colors.white.withValues(alpha: 0.18),
-            borderRadius: BorderRadius.circular(18),
-            child: InkWell(
-              onTap: () => Navigator.pop(context),
-              borderRadius: BorderRadius.circular(18),
-              child: const SizedBox(
-                width: 48,
-                height: 48,
-                child: Icon(Icons.arrow_back_rounded, color: Colors.white),
-              ),
-            ),
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionCard({
-    required String title,
-    required IconData icon,
-    required Widget child,
-  }) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(28),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Colors.white.withValues(alpha: 0.84),
-                Colors.white.withValues(alpha: 0.62),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.72)),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x140F172A),
-                offset: Offset(0, 10),
-                blurRadius: 22,
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: primaryColor.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Icon(icon, color: primaryColor),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: textColor,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              child,
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  static Widget _buildExpandableTopic({
-    required String title,
-    required String content,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x120F172A),
-              blurRadius: 18,
-              offset: Offset(0, 8),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(22),
-          child: ExpansionTile(
-            collapsedBackgroundColor: Colors.white,
-            backgroundColor: Colors.white,
-            collapsedIconColor: primaryColor,
-            iconColor: primaryColor,
-            tilePadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-            childrenPadding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
-            title: Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-                color: textColor,
-              ),
-            ),
-            children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  content,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    height: 1.6,
-                    color: secondaryTextColor,
+          const Expanded(
+            child: Column(
+              children: [
+                Text("Module 3",
+                    style: TextStyle(color: Colors.white70, fontSize: 12)),
+                SizedBox(height: 4),
+                Text(
+                  "Medan Listrik",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+          const SizedBox(width: 40),
+        ],
       ),
     );
   }
 
-  static Widget _buildExpandableTopicWithWidget({
-    required String title,
-    required Widget contentWidget,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x120F172A),
-              blurRadius: 18,
-              offset: Offset(0, 8),
-            ),
-          ],
+  // ================= SECTION CARD (CONSISTENT UI SYSTEM)
+  Widget _sectionCard({required String title, required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF4FC3F7), Color(0xFF81D4FA)],
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(22),
-          child: ExpansionTile(
-            collapsedBackgroundColor: Colors.white,
-            backgroundColor: Colors.white,
-            collapsedIconColor: primaryColor,
-            iconColor: primaryColor,
-            tilePadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-            childrenPadding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
-            title: Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-                color: textColor,
-              ),
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
             ),
-            children: [contentWidget],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ModuleBackground extends StatelessWidget {
-  const _ModuleBackground();
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFFF7FCFF), Color(0xFFE6F5FF), Color(0xFFDDF2FF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: const [
-          _BackgroundOrb(alignment: Alignment(-1.0, -0.9), size: 180, color: Color(0x3353C8F8)),
-          _BackgroundOrb(alignment: Alignment(1.0, -0.1), size: 220, color: Color(0x224DA8FF)),
-          _BackgroundOrb(alignment: Alignment(-0.8, 0.95), size: 190, color: Color(0x2080DEEA)),
+          const SizedBox(height: 12),
+          child,
         ],
       ),
     );
   }
 }
 
-class _BackgroundOrb extends StatelessWidget {
-  const _BackgroundOrb({
-    required this.alignment,
-    required this.size,
-    required this.color,
-  });
+// ================= TOPIC (NO DIVIDER BUG FIXED)
+class _Topic extends StatelessWidget {
+  final String title;
+  final String content;
 
-  final Alignment alignment;
-  final double size;
-  final Color color;
+  const _Topic({required this.title, required this.content});
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: alignment,
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: [color, color.withValues(alpha: 0)],
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 14),
+          childrenPadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          title: Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.w700),
           ),
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                content,
+                style: const TextStyle(
+                  height: 1.6,
+                  fontSize: 14,
+                  color: secondaryTextColor,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _BulletText extends StatelessWidget {
-  const _BulletText(this.text);
+// ================= BACKGROUND (MATCH ALL MODULES)
+class _BackgroundGlow extends StatelessWidget {
+  const _BackgroundGlow();
 
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned(
+          top: -80,
+          left: -80,
+          child: _orb(200, const Color(0x334FC3F7)),
+        ),
+        Positioned(
+          bottom: -80,
+          right: -60,
+          child: _orb(220, const Color(0x224FC3F7)),
+        ),
+      ],
+    );
+  }
+
+  Widget _orb(double size, Color color) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [color, Colors.transparent],
+        ),
+      ),
+    );
+  }
+}
+
+// ================= BULLET
+class _BulletText extends StatelessWidget {
   final String text;
+  const _BulletText(this.text);
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 8,
-            height: 8,
-            margin: const EdgeInsets.only(top: 7),
+            width: 7,
+            height: 7,
             decoration: const BoxDecoration(
-              color: primaryColor,
+              color: Colors.white,
               shape: BoxShape.circle,
             ),
           ),
@@ -406,11 +312,7 @@ class _BulletText extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
-                fontSize: 15,
-                height: 1.55,
-                color: secondaryTextColor,
-              ),
+              style: const TextStyle(color: Colors.white, height: 1.4),
             ),
           ),
         ],

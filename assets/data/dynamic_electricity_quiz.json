@@ -1,0 +1,102 @@
+[
+  {
+    "question": "Arus listrik adalah aliran?",
+    "options": [
+      "Proton",
+      "Neutron",
+      "Elektron",
+      "Atom"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "Satuan kuat arus listrik adalah?",
+    "options": [
+      "Volt",
+      "Ohm",
+      "Ampere",
+      "Coulomb"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "Alat untuk mengukur arus listrik adalah?",
+    "options": [
+      "Voltmeter",
+      "Amperemeter",
+      "Ohmmeter",
+      "Barometer"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "Hukum Ohm menyatakan hubungan antara?",
+    "options": [
+      "Arus, tegangan, dan hambatan",
+      "Gaya dan massa",
+      "Daya dan energi",
+      "Muatan dan medan listrik"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "Rumus Hukum Ohm yang benar adalah?",
+    "options": [
+      "V = I / R",
+      "V = I × R",
+      "V = R / I",
+      "V = I + R"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "Hambatan listrik satuannya adalah?",
+    "options": [
+      "Volt",
+      "Ampere",
+      "Ohm",
+      "Watt"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "Alat untuk mengukur tegangan listrik adalah?",
+    "options": [
+      "Amperemeter",
+      "Voltmeter",
+      "Ohmmeter",
+      "Galvanometer"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "Tegangan listrik disebut juga?",
+    "options": [
+      "Arus",
+      "Beda potensial",
+      "Daya",
+      "Muatan"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "Rangkaian listrik yang hanya memiliki satu jalur disebut?",
+    "options": [
+      "Paralel",
+      "Campuran",
+      "Seri",
+      "Terbuka"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "Energi listrik dapat berubah menjadi?",
+    "options": [
+      "Hanya panas",
+      "Hanya cahaya",
+      "Panas, cahaya, dan gerak",
+      "Tidak bisa berubah"
+    ],
+    "answer": 2
+  }
+]

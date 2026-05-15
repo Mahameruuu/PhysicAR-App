@@ -9,6 +9,7 @@ import 'module5_screen.dart';
 import 'static_lab_menu.dart';
 import 'package:physic_lab_app/screens/auth/login_screen.dart';
 import 'package:physic_lab_app/services/auth_service.dart';
+import 'package:physic_lab_app/screens/modules/electricity/dynamic/quiz/electricity_quiz_screen.dart';
 
 // ðŸŽ¨ Warna Tema Ceria
 const Color primaryColor = Color(0xFF4FC3F7);
@@ -39,35 +40,35 @@ class DynamicElectricityScreen extends StatelessWidget {
 
   final List<Module> modules = const [
     Module(
-      title: 'Modul 1: Konsep Dasar Listrik Dinamis âš¡',
+      title: 'Modul 1: Konsep Dasar Listrik Dinamis',
       description: 'Apa itu listrik? Yuk kenali muatan dan arus listrik!',
       icon: Icons.flash_on,
       iconColor: Colors.orange,
       duration: '10 menit',
     ),
     Module(
-      title: 'Modul 2: Arus dan Tegangan ðŸ”‹',
+      title: 'Modul 2: Arus dan Tegangan Listrik',
       description: 'Pelajari hubungan antara arus, tegangan, dan hambatan!',
       icon: Icons.electric_bolt,
       iconColor: Colors.redAccent,
       duration: '12 menit',
     ),
     Module(
-      title: 'Modul 3: Medan Listrik ðŸŒˆ',
+      title: 'Modul 3: Medan Listrik & Gaya Coulomb',
       description: 'Gimana sih arah gaya pada muatan listrik?',
       icon: Icons.bubble_chart,
       iconColor: Colors.blueAccent,
       duration: '15 menit',
     ),
     Module(
-      title: 'Modul 4: Elektroskop & Induksi ðŸ”',
+      title: 'Modul 4: Elektroskop & Induksi Listrik',
       description: 'Eksperimen sederhana mengenal elektroskop!',
       icon: Icons.science_outlined,
       iconColor: Colors.green,
       duration: '10 menit',
     ),
     Module(
-      title: 'Modul 5: Penerapan Listrik Sehari-hari ðŸ’¡',
+      title: 'Modul 5: Penerapan Listrik Sehari-hari',
       description: 'Bagaimana listrik membantu kehidupan kita?',
       icon: Icons.engineering,
       iconColor: Colors.purple,
@@ -110,6 +111,217 @@ class DynamicElectricityScreen extends StatelessWidget {
     );
   }
 
+  void _showQuizDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(28),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x220F172A),
+                      blurRadius: 24,
+                      offset: Offset(0, 12),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+
+                    Container(
+                      width: 78,
+                      height: 78,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF8B5CF6), Color(0xFFA78BFA)],
+                        ),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: const Icon(
+                        Icons.psychology_rounded,
+                        color: Colors.white,
+                        size: 40,
+                      ),
+                    ),
+
+                    const SizedBox(height: 22),
+
+                    const Text(
+                      "Mulai Quiz?",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: textColor,
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    const Text(
+                      "Quiz terdiri dari 10 soal pilihan ganda. Pastikan kamu sudah siap.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        height: 1.6,
+                        color: Color(0xFF5E7187),
+                      ),
+                    ),
+
+                    const SizedBox(height: 26),
+
+                    Row(
+                      children: [
+
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text("Batal"),
+                          ),
+                        ),
+
+                        const SizedBox(width: 12),
+
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ElectricityQuizScreen(),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF8B5CF6),
+                            ),
+                            child: const Text("Mulai"),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showLabDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    barrierDismissible: true,
+    builder: (context) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x220F172A),
+                    blurRadius: 24,
+                    offset: Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 78,
+                    height: 78,
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF36BFFA), Color(0xFF60A5FA)],
+                      ),
+                      borderRadius: BorderRadius.all(Radius.circular(24)),
+                    ),
+                    child: const Icon(
+                      Icons.science_outlined,
+                      color: Colors.white,
+                      size: 40,
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  const Text(
+                    "Masuk Lab Virtual?",
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    "Kamu akan masuk ke laboratorium virtual untuk simulasi listrik.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.6,
+                      color: Color(0xFF5E7187),
+                    ),
+                  ),
+                  const SizedBox(height: 26),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text("Batal"),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const StaticLabMenu(),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryColor,
+                          ),
+                          child: const Text("Masuk"),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -161,7 +373,7 @@ class DynamicElectricityScreen extends StatelessWidget {
           ),
         ],
       ),
-      floatingActionButton: _buildFloatingLabButton(context),
+      floatingActionButton: _buildFloatingButtons(context),
       bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
@@ -282,7 +494,7 @@ class DynamicElectricityScreen extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 16.0),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: cardColor.withValues(alpha: 0.92),
+          color: Colors.white.withValues(alpha: 0.92),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: module.iconColor.withValues(alpha: 0.16),
@@ -406,36 +618,93 @@ class DynamicElectricityScreen extends StatelessWidget {
   }
 
   // --- FAB LAB ---
-  Widget _buildFloatingLabButton(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x334FC3F7),
-            blurRadius: 22,
-            offset: Offset(0, 10),
+  Widget _buildFloatingButtons(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        // =========================
+        // QUIZ BUTTON
+        // =========================
+        Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: const BoxDecoration(
+            borderRadius: BorderRadius.all(Radius.circular(20)),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x338B5CF6),
+                blurRadius: 20,
+                offset: Offset(0, 8),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: FloatingActionButton.extended(
-            onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => StaticLabMenu()));
-            },
-            backgroundColor: primaryColor.withValues(alpha: 0.96),
-            elevation: 0,
-            icon: const Icon(Icons.science_outlined, color: Colors.white),
-            label: const Text(
-              "Lab Virtual",
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+              child: FloatingActionButton.extended(
+                heroTag: 'quiz_btn',
+                onPressed: () => _showQuizDialog(context),
+                backgroundColor:
+                    const Color(0xFF8B5CF6).withValues(alpha: 0.95),
+                elevation: 0,
+                icon: const Icon(
+                  Icons.psychology_rounded,
+                  color: Colors.white,
+                ),
+                label: const Text(
+                  "Quiz",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
             ),
           ),
         ),
-      ),
+
+        // =========================
+        // LAB BUTTON
+        // =========================
+        Container(
+          decoration: const BoxDecoration(
+            borderRadius: BorderRadius.all(Radius.circular(22)),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x334FC3F7),
+                blurRadius: 22,
+                offset: Offset(0, 10),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(22),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+              child: FloatingActionButton.extended(
+                heroTag: 'lab_btn',
+                onPressed: () => _showLabDialog(context),
+                backgroundColor: primaryColor.withValues(alpha: 0.96),
+                elevation: 0,
+                icon: const Icon(
+                  Icons.science_outlined,
+                  color: Colors.white,
+                ),
+                label: const Text(
+                  "Lab Virtual",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
