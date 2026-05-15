@@ -1,9 +1,37 @@
 import 'dart:math';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
+// ──────────────────────────────────────────────
+// DESIGN TOKENS — PhysicAR Sci-fi Theme (Storm)
+// ──────────────────────────────────────────────
+const Color kBgDeep       = Color(0xFF060A14);
+const Color kBgPanel      = Color(0xFF0A0E1A);
+const Color kBorderColor  = Color(0xFF1A2A4A);
+const Color kAccentYellow = Color(0xFFFFD54F);
+const Color kAccentOrange = Color(0xFFF57F17);
+const Color kTextPrimary  = Color(0xFFE8F0FF);
+const Color kTextMuted    = Color(0xFF3A5580);
+
+// ── Data class ────────────────────────────────
+class _Particle {
+  double x, y, vx, vy, r, alpha, phase;
+  _Particle({
+    required this.x, required this.y,
+    required this.vx, required this.vy,
+    required this.r, required this.alpha,
+    required this.phase,
+  });
+}
+
+class _BoltSegment {
+  final Offset p1, p2;
+  final int depth;
+  _BoltSegment(this.p1, this.p2, this.depth);
+}
+
+// ── Screen ────────────────────────────────────
 class ModulePetirScreen extends StatefulWidget {
   const ModulePetirScreen({super.key});
 
@@ -13,332 +41,553 @@ class ModulePetirScreen extends StatefulWidget {
 
 class _ModulePetirScreenState extends State<ModulePetirScreen>
     with TickerProviderStateMixin {
-  double awanCharge = 0.0;
-  bool isLightning = false;
-  late Ticker _ticker;
-  late AnimationController _cloudPulse;
-  late AnimationController _cameraShake;
+  double _charge = 0.0;
+  bool _lightning = false;
+  bool _dragging = false;
+  double _flashAlpha = 0.0;
+  double _shakeX = 0.0, _shakeY = 0.0;
+  double _cloudPulse = 0.0;
+  double _t = 0;
 
-  List<Offset> chargeTrails = [];
+  List<_Particle> _particles = [];
+  List<_BoltSegment> _boltSegments = [];
+
+  late Ticker _ticker;
+  final Random _rng = Random();
 
   @override
   void initState() {
     super.initState();
+    _spawnParticles();
+    _ticker = createTicker(_onTick)..start();
+  }
 
-    // Animasi awan berdenyut
-    _cloudPulse = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-      lowerBound: 0.95,
-      upperBound: 1.05,
-    )..repeat(reverse: true);
+  void _spawnParticles() {
+    _particles = List.generate(40, (_) => _Particle(
+      x: _rng.nextDouble() * 480,
+      y: _rng.nextDouble() * 300,
+      vx: (_rng.nextDouble() - .5) * .3,
+      vy: (_rng.nextDouble() - .5) * .3,
+      r: .5 + _rng.nextDouble() * 1.5,
+      alpha: _rng.nextDouble() * .5,
+      phase: _rng.nextDouble() * pi * 2,
+    ));
+  }
 
-    // Efek kamera bergoyang saat petir
-    _cameraShake = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 350),
+  void _onTick(Duration _) {
+    if (!mounted) return;
+    setState(() {
+      _t++;
+      _cloudPulse = sin(_t * .025) * .05;
+
+      // charge decay
+      if (!_lightning && !_dragging && _charge > 0) {
+        _charge = (_charge - .0025).clamp(0, 1);
+      }
+
+      // trigger lightning
+      if (_charge >= 1.0 && !_lightning) _triggerLightning();
+
+      // flash decay
+      if (_flashAlpha > 0) _flashAlpha = (_flashAlpha - .04).clamp(0, 1);
+      _shakeX *= .82; _shakeY *= .82;
+
+      // particles
+      for (final p in _particles) {
+        p.phase += .02;
+        p.alpha = (.15 + sin(p.phase) * .1) * max(.1, _charge * .8);
+        p.x += p.vx + (_rng.nextDouble() - .5) * .2;
+        p.y += p.vy + (_rng.nextDouble() - .5) * .2;
+        if (p.x < 0) p.x = 480;
+        if (p.x > 480) p.x = 0;
+        if (p.y < 0) p.y = 300;
+        if (p.y > 300) p.y = 0;
+      }
+    });
+  }
+
+  void _triggerLightning() {
+    _lightning = true;
+    _flashAlpha = 1.0;
+    _shakeX = (_rng.nextDouble() - .5) * 18;
+    _shakeY = (_rng.nextDouble() - .5) * 10;
+    HapticFeedback.heavyImpact();
+    _boltSegments = _genBolt(
+      const Offset(200, 130),
+      pi / 2,
+      160,
+      7,
     );
-
-    // Ticker untuk update animasi dan logika petir
-    _ticker = createTicker((_) {
+    Future.delayed(const Duration(milliseconds: 700), () {
+      if (!mounted) return;
       setState(() {
-        // Trigger petir saat muatan penuh
-        if (awanCharge >= 1.0 && !isLightning) {
-          isLightning = true;
-          _cameraShake.forward(from: 0);
-          HapticFeedback.heavyImpact();
-          Future.delayed(const Duration(milliseconds: 600), () {
-            setState(() {
-              isLightning = false;
-              awanCharge = 0.0;
-            });
-          });
-        }
-
-        // Peluruhan muatan otomatis
-        if (!isLightning && awanCharge > 0.0) {
-          awanCharge -= 0.003;
-          if (awanCharge < 0.0) awanCharge = 0.0;
-        }
-
-        // Update trail muatan agar bergerak pelan (AR-like)
-        for (int i = 0; i < chargeTrails.length; i++) {
-          chargeTrails[i] = chargeTrails[i] +
-              Offset(sin(i + awanCharge * pi) * 0.5, cos(i + awanCharge * pi) * 0.5);
-        }
-        // Batasi jumlah trail
-        if (chargeTrails.length > 50) chargeTrails.removeAt(0);
+        _lightning = false;
+        _charge = 0;
+        _flashAlpha = 0;
       });
     });
-    _ticker.start();
+  }
+
+  List<_BoltSegment> _genBolt(Offset start, double angle, double len, int depth) {
+    final result = <_BoltSegment>[];
+    void seg(Offset p, double a, double l, int d) {
+      if (d <= 0 || l < 8) return;
+      final end = p + Offset(cos(a) * l, sin(a) * l);
+      result.add(_BoltSegment(p, end, d));
+      seg(end, a + (_rng.nextDouble() - .5) * .9, l * (.6 + _rng.nextDouble() * .2), d - 1);
+      if (_rng.nextDouble() < .4) {
+        seg(end, a + (_rng.nextDouble() - .42), l * .5, d - 2);
+      }
+    }
+    seg(start, angle, len, depth);
+    return result;
+  }
+
+  Offset? _lastDragPos;
+
+  void _onPanStart(DragStartDetails d) {
+    // only grab if near cloud center
+    const cloudCenter = Offset(175, 140);
+    if ((d.localPosition - cloudCenter).distance < 110) {
+      _dragging = true;
+      _lastDragPos = d.localPosition;
+    }
+  }
+
+  void _onPanUpdate(DragUpdateDetails d) {
+    if (!_dragging) return;
+    if (_lastDragPos != null) {
+      final dist = (d.localPosition - _lastDragPos!).distance;
+      setState(() {
+        _charge = (_charge + dist * .00038).clamp(0, 1);
+      });
+    }
+    _lastDragPos = d.localPosition;
+  }
+
+  void _onPanEnd(DragEndDetails _) {
+    _dragging = false;
+    _lastDragPos = null;
   }
 
   @override
   void dispose() {
     _ticker.dispose();
-    _cloudPulse.dispose();
-    _cameraShake.dispose();
     super.dispose();
   }
 
+  // ── UI ────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
-    final shakeOffset = sin(_cameraShake.value * pi * 15) * 12;
-
     return Scaffold(
-      backgroundColor: Colors.blueGrey[900],
-      appBar: AppBar(
-        title: const Text("⚡ Petir 3D AR Simulation"),
-        backgroundColor: Colors.blueGrey[800],
+      backgroundColor: kBgDeep,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Expanded(child: _buildSimArea()),
+            _buildFooter(),
+          ],
+        ),
       ),
-      body: AnimatedBuilder(
-        animation: Listenable.merge([_cloudPulse, _cameraShake]),
-        builder: (context, child) {
-          return Transform(
-            alignment: FractionalOffset.center,
-            transform: Matrix4.identity()
-              ..setEntry(3, 2, 0.001) // perspektif 3D
-              ..rotateX(0.03)
-              ..rotateY(shakeOffset / 100),
-            child: Stack(
-              alignment: Alignment.center,
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
+      decoration: const BoxDecoration(
+        color: kBgPanel,
+        border: Border(bottom: BorderSide(color: kBorderColor)),
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              width: 36, height: 36,
+              decoration: BoxDecoration(
+                border: Border.all(color: kBorderColor),
+                borderRadius: BorderRadius.circular(8),
+                color: const Color(0xFF111827),
+              ),
+              child: const Icon(Icons.arrow_back_ios_new,
+                  size: 14, color: kAccentYellow),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('MODUL 05 · PHYSICAR',
+                style: TextStyle(
+                  fontFamily: 'Courier',
+                  fontSize: 9,
+                  letterSpacing: 3,
+                  color: kAccentYellow.withOpacity(.7),
+                )),
+              const SizedBox(height: 2),
+              const Text('PETIR STATIS',
+                style: TextStyle(
+                  fontFamily: 'Courier',
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: kTextPrimary,
+                  letterSpacing: 2,
+                )),
+            ],
+          ),
+          const Spacer(),
+          // charge badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              border: Border.all(color: kAccentYellow.withOpacity(.4)),
+              borderRadius: BorderRadius.circular(20),
+              color: kAccentYellow.withOpacity(.07),
+            ),
+            child: Row(
               children: [
-                // ===== Layer 1: Gradient background dinamis =====
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Color.lerp(Colors.blueGrey[900], Colors.deepPurple[900], awanCharge)!,
-                        Color.lerp(Colors.blueGrey[700], Colors.red[900], awanCharge)!,
-                      ],
-                    ),
-                  ),
-                ),
+                const Icon(Icons.electric_bolt, size: 13, color: kAccentYellow),
+                const SizedBox(width: 4),
+                Text('${(_charge * 100).toInt()}%',
+                  style: const TextStyle(
+                    fontFamily: 'Courier',
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: kAccentYellow,
+                  )),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-                // ===== Layer 2: Awan samar bergerak (parallax) =====
-                Positioned.fill(
-                  child: CustomPaint(
-                    painter: _MovingCloudPainter(animationValue: _cloudPulse.value),
-                  ),
-                ),
+  Widget _buildSimArea() {
+    return GestureDetector(
+      onPanStart: _onPanStart,
+      onPanUpdate: _onPanUpdate,
+      onPanEnd: _onPanEnd,
+      child: ClipRect(
+        child: Transform.translate(
+          offset: Offset(_shakeX, _shakeY),
+          child: CustomPaint(
+            painter: _StormScenePainter(
+              charge: _charge,
+              t: _t,
+              cloudPulse: _cloudPulse,
+              particles: _particles,
+              lightning: _lightning,
+              boltSegments: _boltSegments,
+              flashAlpha: _flashAlpha,
+              rng: _rng,
+            ),
+            child: const SizedBox.expand(),
+          ),
+        ),
+      ),
+    );
+  }
 
-                // ===== Layer 3: Partikel cahaya =====
-                Positioned.fill(
-                  child: CustomPaint(
-                    painter: _ParticlePainter(animationValue: _cloudPulse.value),
-                  ),
-                ),
-
-                // ===== Layer 4: Tanah =====
-                Positioned(
-                  bottom: 0,
-                  child: Container(
-                    width: MediaQuery.of(context).size.width,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.green[800]!, Colors.green[600]!],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      ),
-                    ),
-                  ),
-                ),
-
-                // ===== Layer 5: Awan interaktif + trail muatan =====
-                Positioned(
-                  top: 100,
-                  child: GestureDetector(
-                    onPanUpdate: (details) {
-                      final double swipeDelta = details.delta.distance;
-                      setState(() {
-                        if (swipeDelta > 1.0) {
-                          awanCharge += swipeDelta * 0.0015;
-                          if (awanCharge > 1.0) awanCharge = 1.0;
-                          chargeTrails.add(details.localPosition);
-                        }
-                      });
-                    },
-                    child: Transform(
-                      alignment: Alignment.center,
-                      transform: Matrix4.identity()
-                        ..setEntry(3, 2, 0.002)
-                        ..rotateX(sin(awanCharge * pi) * 0.1)
-                        ..rotateY(cos(awanCharge * pi) * 0.1)
-                        ..scale(1.0 + awanCharge * 0.05),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Icon(
-                            Icons.cloud,
-                            size: 200,
-                            color: Color.lerp(
-                                Colors.grey[300], Colors.blueGrey[700], awanCharge),
-                          ),
-                          CustomPaint(
-                            size: const Size(200, 200),
-                            painter: _ChargeTrailPainter(chargeTrails: chargeTrails),
-                          ),
-                          Text(
-                            "${(awanCharge * 100).toInt()}%",
-                            style: const TextStyle(
-                              fontSize: 28,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
+  Widget _buildFooter() {
+    final pct = (_charge * 100).toInt();
+    return Container(
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: const BoxDecoration(
+        color: kBgPanel,
+        border: Border(top: BorderSide(color: kBorderColor)),
+      ),
+      child: Row(
+        children: [
+          Text('MUATAN Q',
+            style: TextStyle(
+              fontFamily: 'Courier',
+              fontSize: 9,
+              letterSpacing: 2.5,
+              color: kAccentYellow.withOpacity(.7),
+            )),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: Stack(
+                children: [
+                  Container(height: 6, color: const Color(0xFF111318)),
+                  FractionallySizedBox(
+                    widthFactor: _charge,
+                    child: Container(
+                      height: 6,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [kAccentOrange, kAccentYellow, Color(0xFFFFF176)],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: kAccentYellow.withOpacity(.5),
+                            blurRadius: 8,
                           ),
                         ],
                       ),
                     ),
                   ),
-                ),
-
-                // ===== Layer 6: Efek petir =====
-                if (isLightning)
-                  Container(
-                    color: Colors.white.withOpacity(_cameraShake.value * 0.8),
-                  ),
-                if (isLightning)
-                  CustomPaint(
-                    size: Size(MediaQuery.of(context).size.width, 400),
-                    painter:
-                        _LightningPainter3D(randomSeed: DateTime.now().millisecondsSinceEpoch),
-                  ),
-
-                // ===== Layer 7: Instruksi =====
-                Positioned(
-                  bottom: 120,
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      "⚡ GOSOK awan untuk menambah muatan.\nMuatan: ${(awanCharge * 100).toInt()}%",
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          );
-        },
+          ),
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 36,
+            child: Text('$pct%',
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                fontFamily: 'Courier',
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: kAccentYellow,
+              )),
+          ),
+        ],
       ),
     );
   }
 }
 
-// =================== Custom Painter Trail ===================
-class _ChargeTrailPainter extends CustomPainter {
-  final List<Offset> chargeTrails;
+// ── Main Scene Painter ────────────────────────
+class _StormScenePainter extends CustomPainter {
+  final double charge, t, cloudPulse, flashAlpha;
+  final bool lightning;
+  final List<_Particle> particles;
+  final List<_BoltSegment> boltSegments;
+  final Random rng;
 
-  _ChargeTrailPainter({required this.chargeTrails});
+  const _StormScenePainter({
+    required this.charge,
+    required this.t,
+    required this.cloudPulse,
+    required this.particles,
+    required this.lightning,
+    required this.boltSegments,
+    required this.flashAlpha,
+    required this.rng,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
-    for (int i = 0; i < chargeTrails.length; i++) {
-      final offset = chargeTrails[i];
-      final double opacity = i / chargeTrails.length;
-      final double radius = 3.0 + opacity * 5.0;
-      final paint = Paint()
-        ..color = Colors.lightBlueAccent.withOpacity(opacity * 0.8)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
-      canvas.drawCircle(offset, radius, paint);
+    final W = size.width, H = size.height;
+
+    _drawBackground(canvas, W, H);
+    _drawMovingClouds(canvas, W, H);
+    _drawParticles(canvas);
+    _drawCloud(canvas, W, H);
+    if (lightning) _drawLightning(canvas, W, H);
+    if (!lightning && charge < .05) _drawHint(canvas, W, H);
+  }
+
+  void _drawBackground(Canvas canvas, double W, double H) {
+    // sky
+    final skyGrad = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color.lerp(const Color(0xFF060A14), const Color(0xFF1A0A30), charge)!,
+          Color.lerp(const Color(0xFF0D1322), const Color(0xFF3D0D0D), charge)!,
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, W, H * .75));
+    canvas.drawRect(Rect.fromLTWH(0, 0, W, H * .75), skyGrad);
+
+    // ground
+    final groundGrad = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFF0A1A0A), Color(0xFF061006)],
+      ).createShader(Rect.fromLTWH(0, H * .72, W, H * .28));
+    canvas.drawRect(Rect.fromLTWH(0, H * .72, W, H * .28), groundGrad);
+
+    // horizon glow
+    if (charge > .05) {
+      final glowPaint = Paint()
+        ..shader = RadialGradient(
+          colors: [
+            Color(0xFFFFDC00).withOpacity(charge * .15),
+            Colors.transparent,
+          ],
+        ).createShader(Rect.fromCircle(
+          center: Offset(W * .5, H * .73), radius: W * .45));
+      canvas.drawRect(Rect.fromLTWH(0, 0, W, H), glowPaint);
+    }
+
+    // grid on ground
+    final gridP = Paint()
+      ..color = const Color(0xFF326432).withOpacity(.15)
+      ..strokeWidth = .8;
+    for (double x = 0; x <= W; x += 30) {
+      canvas.drawLine(Offset(x, H * .72),
+          Offset(W / 2 + (x - W / 2) * .3, H), gridP);
+    }
+    for (int row = 0; row < 6; row++) {
+      final y = H * .73 + row * (H * .27 / 5);
+      canvas.drawLine(Offset(0, y), Offset(W, y), gridP);
     }
   }
 
-  @override
-  bool shouldRepaint(covariant _ChargeTrailPainter oldDelegate) => true;
-}
+  void _drawMovingClouds(Canvas canvas, double W, double H) {
+    for (int i = 0; i < 8; i++) {
+      final cx = ((i * 70 + t * .15) % W + W) % W;
+      final cy = 30.0 + i * 18;
+      final alpha = .04 + i % 3 * .015;
+      final p = Paint()..color = Color.fromRGBO(180, 200, 255, alpha);
+      canvas.drawOval(Rect.fromCenter(center: Offset(cx, cy), width: 110, height: 44), p);
+      canvas.drawOval(Rect.fromCenter(center: Offset(cx + 30, cy - 8), width: 70, height: 32), p);
+    }
+  }
 
-// =================== Custom Painter Petir ===================
-class _LightningPainter3D extends CustomPainter {
-  final int randomSeed;
-  _LightningPainter3D({required this.randomSeed});
-  late final Random random = Random(randomSeed);
+  void _drawParticles(Canvas canvas) {
+    for (final p in particles) {
+      final gp = Paint()
+        ..shader = RadialGradient(
+          colors: [
+            const Color(0xFFFFE64A).withOpacity(.9 * p.alpha),
+            const Color(0xFFFFE64A).withOpacity(0),
+          ],
+        ).createShader(Rect.fromCircle(center: Offset(p.x, p.y), radius: p.r * 3));
+      canvas.drawCircle(Offset(p.x, p.y), p.r * 3, gp);
+    }
+  }
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    final glowPaint = Paint()
-      ..color = Colors.yellowAccent.withOpacity(0.5)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15);
+  void _drawCloud(Canvas canvas, double W, double H) {
+    final cx = W * .5, cy = H * .28;
+    final cs = 1 + charge * .08 + cloudPulse;
+    canvas.save();
+    canvas.translate(cx, cy);
+    canvas.scale(cs, cs);
 
-    final mainPaint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 4
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
+    // glow
+    if (charge > .1) {
+      final gp = Paint()
+        ..shader = RadialGradient(
+          colors: [
+            const Color(0xFFFFC800).withOpacity(charge * .3),
+            Colors.transparent,
+          ],
+        ).createShader(Rect.fromCircle(center: Offset.zero, radius: 110));
+      canvas.drawCircle(Offset.zero, 110, gp);
+    }
 
-    double startX = size.width / 2;
-    double startY = 150;
-    double y = startY;
+    // helper to lerp int channels
+    int lerpC(int a, int b) => (a + (b - a) * charge).round();
 
-    for (int i = 0; i < 15; i++) {
-      double x = startX + (random.nextDouble() - 0.5) * 80;
-      double nextY = y + 25 + random.nextDouble() * 15;
-      double currentStrokeWidth = 3.0 + random.nextDouble() * 3;
-      mainPaint.strokeWidth = currentStrokeWidth;
+    final cloudBase = Color.fromRGBO(lerpC(60, 90), lerpC(80, 100), lerpC(100, 120), 1);
+    final cloudDark = Color.fromRGBO(lerpC(30, 60), lerpC(40, 60), lerpC(60, 80), 1);
+
+    void blob(double dx, double dy, double rw, double rh) {
+      final gp = Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(-.3, -.4),
+          colors: [cloudBase, cloudDark],
+        ).createShader(Rect.fromCenter(
+          center: Offset(dx, dy), width: rw * 2, height: rh * 2));
+      canvas.drawOval(
+        Rect.fromCenter(center: Offset(dx, dy), width: rw * 2, height: rh * 2), gp);
+    }
+
+    blob(-55, 10, 50, 35);
+    blob(55, 10, 50, 35);
+    blob(0, 20, 65, 38);
+    blob(-25, -12, 45, 32);
+    blob(25, -12, 45, 32);
+    blob(0, -28, 35, 26);
+
+    // inner lightning veins
+    if (charge > .3) {
+      final veinP = Paint()
+        ..color = const Color(0xFFFFE650).withOpacity(charge * .6)
+        ..strokeWidth = 1
+        ..style = PaintingStyle.stroke;
+      for (int v = 0; v < 5; v++) {
+        final sx = (rng.nextDouble() - .5) * 60;
+        final sy = (rng.nextDouble() - .5) * 20;
+        final path = Path()..moveTo(sx, sy);
+        for (int s = 0; s < 4; s++) {
+          path.lineTo(sx + (rng.nextDouble() - .5) * 50, sy + rng.nextDouble() * 30);
+        }
+        canvas.drawPath(path, veinP);
+      }
+    }
+
+    // percentage text
+    if (charge > .05) {
+      final tp = TextPainter(
+        text: TextSpan(
+          text: '${(charge * 100).toInt()}%',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Courier',
+            shadows: [Shadow(color: Color(0xFFFFDC00), blurRadius: 12)],
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, Offset(-tp.width / 2, -tp.height / 2 + 8));
+    }
+
+    canvas.restore();
+  }
+
+  void _drawLightning(Canvas canvas, double W, double H) {
+    for (final b in boltSegments) {
+      // glow pass
       canvas.drawLine(
-          Offset(startX, y), Offset(x, nextY), glowPaint..strokeWidth = currentStrokeWidth * 3);
-      canvas.drawLine(Offset(startX, y), Offset(x, nextY), mainPaint);
-      startX = x;
-      y = nextY;
-      if (y > size.height - 100) break;
+        b.p1, b.p2,
+        Paint()
+          ..color = const Color(0xFFFFFFC8).withOpacity(.5)
+          ..strokeWidth = 6.0 + b.depth * 1.5
+          ..strokeCap = StrokeCap.round
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
+      );
+      // core
+      canvas.drawLine(
+        b.p1, b.p2,
+        Paint()
+          ..color = Colors.white.withOpacity(.8 + rng.nextDouble() * .2)
+          ..strokeWidth = 1.0 + b.depth * .5
+          ..strokeCap = StrokeCap.round,
+      );
     }
 
-    for (int i = 0; i < 6; i++) {
-      double bx = size.width / 2 + (random.nextDouble() - 0.5) * 80;
-      double by = 200 + random.nextDouble() * 150;
-      double ex = bx + (random.nextDouble() - 0.5) * 80;
-      double ey = by + random.nextDouble() * 50;
-      canvas.drawLine(Offset(bx, by), Offset(ex, ey), glowPaint..strokeWidth = 2);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _LightningPainter3D oldDelegate) =>
-      oldDelegate.randomSeed != randomSeed;
-}
-
-// =================== Custom Painter Awan Bergerak ===================
-class _MovingCloudPainter extends CustomPainter {
-  final double animationValue;
-  _MovingCloudPainter({required this.animationValue});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withOpacity(0.05);
-    for (int i = 0; i < 10; i++) {
-      final dx = (i * 60 + animationValue * 50) % size.width;
-      final dy = 50.0 + i * 30;
-      canvas.drawOval(Rect.fromLTWH(dx, dy, 100, 50), paint);
+    // flash overlay
+    if (flashAlpha > 0) {
+      canvas.drawRect(
+        Rect.fromLTWH(0, 0, W, H),
+        Paint()..color = const Color(0xFFFFF0C8).withOpacity(flashAlpha * .55),
+      );
     }
   }
 
-  @override
-  bool shouldRepaint(covariant _MovingCloudPainter oldDelegate) => true;
-}
-
-// =================== Custom Painter Partikel ===================
-class _ParticlePainter extends CustomPainter {
-  final double animationValue;
-  _ParticlePainter({required this.animationValue});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.yellowAccent.withOpacity(0.2);
-    final rand = Random(0);
-    for (int i = 0; i < 30; i++) {
-      final x = (rand.nextDouble() * size.width + animationValue * 30) % size.width;
-      final y = rand.nextDouble() * size.height;
-      canvas.drawCircle(Offset(x, y), rand.nextDouble() * 2 + 1, paint);
-    }
+  void _drawHint(Canvas canvas, double W, double H) {
+    final tp = TextPainter(
+      text: const TextSpan(
+        text: 'GOSOK AWAN untuk mengisi muatan',
+        style: TextStyle(
+          fontFamily: 'Courier',
+          fontSize: 11,
+          color: Color(0xFF3A5580),
+          letterSpacing: 1,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    )..layout(maxWidth: W);
+    tp.paint(canvas, Offset((W - tp.width) / 2, H - 80));
   }
 
   @override
-  bool shouldRepaint(covariant _ParticlePainter oldDelegate) => true;
+  bool shouldRepaint(_StormScenePainter o) => true;
 }

@@ -15,12 +15,15 @@ class StaticLabMenu extends StatefulWidget {
 
 class _StaticLabMenuState extends State<StaticLabMenu>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+
+  // 1 controller saja (biar tidak error & ringan)
+  late AnimationController _floatController;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+
+    _floatController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
@@ -28,7 +31,7 @@ class _StaticLabMenuState extends State<StaticLabMenu>
 
   @override
   void dispose() {
-    _controller.dispose();
+    _floatController.dispose();
     super.dispose();
   }
 
@@ -38,18 +41,20 @@ class _StaticLabMenuState extends State<StaticLabMenu>
       body: Stack(
         children: [
           const _LabMenuBackground(),
+
           SafeArea(
             child: Column(
               children: [
                 _buildHeader(context),
+
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildIntroCard(),
                         const SizedBox(height: 18),
+
                         const Text(
                           'Interactive Experiments',
                           style: TextStyle(
@@ -58,7 +63,9 @@ class _StaticLabMenuState extends State<StaticLabMenu>
                             color: Color(0xFF0F3C67),
                           ),
                         ),
+
                         const SizedBox(height: 8),
+
                         const Text(
                           'Pilih eksperimen virtual untuk melihat bagaimana listrik statis bekerja dalam situasi nyata.',
                           style: TextStyle(
@@ -67,7 +74,9 @@ class _StaticLabMenuState extends State<StaticLabMenu>
                             color: Color(0xFF61758A),
                           ),
                         ),
+
                         const SizedBox(height: 18),
+
                         Expanded(
                           child: GridView.count(
                             crossAxisCount: 2,
@@ -118,6 +127,7 @@ class _StaticLabMenuState extends State<StaticLabMenu>
     );
   }
 
+  // ================= HEADER =================
   Widget _buildHeader(BuildContext context) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
@@ -148,11 +158,13 @@ class _StaticLabMenuState extends State<StaticLabMenu>
               child: const SizedBox(
                 width: 48,
                 height: 48,
-                child: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+                child: Icon(Icons.arrow_back_ios_new_rounded,
+                    color: Colors.white, size: 20),
               ),
             ),
           ),
           const SizedBox(width: 14),
+
           const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -177,6 +189,7 @@ class _StaticLabMenuState extends State<StaticLabMenu>
               ],
             ),
           ),
+
           Container(
             width: 48,
             height: 48,
@@ -184,77 +197,14 @@ class _StaticLabMenuState extends State<StaticLabMenu>
               color: Colors.white.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(18),
             ),
-            child: const Icon(
-              Icons.science_outlined,
-              color: Colors.white,
-            ),
+            child: const Icon(Icons.science_outlined, color: Colors.white),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildIntroCard() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(28),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(28),
-            gradient: LinearGradient(
-              colors: [
-                Colors.white.withValues(alpha: 0.82),
-                Colors.white.withValues(alpha: 0.62),
-              ],
-            ),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.72),
-            ),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x180F172A),
-                blurRadius: 22,
-                offset: Offset(0, 12),
-              ),
-            ],
-          ),
-          child: const Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Experiment Zone',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF0F3C67),
-                      ),
-                    ),
-                    SizedBox(height: 10),
-                    Text(
-                      'Belajar lewat simulasi geser, gosok, dan observasi untuk memahami efek muatan listrik statis.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        height: 1.55,
-                        color: Color(0xFF61758A),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(width: 12),
-              _LabBadge(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
+  // ================= CARD (ANIMATED FIX) =================
   Widget _buildExperimentCard(
     BuildContext context, {
     required String title,
@@ -293,7 +243,8 @@ class _StaticLabMenuState extends State<StaticLabMenu>
               Align(
                 alignment: Alignment.topRight,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.22),
                     borderRadius: BorderRadius.circular(999),
@@ -308,15 +259,22 @@ class _StaticLabMenuState extends State<StaticLabMenu>
                   ),
                 ),
               ),
+
               const Spacer(),
+
+              // ===== ANIMATION FIXED =====
               AnimatedBuilder(
-                animation: _controller,
+                animation: _floatController,
                 builder: (context, child) {
-                  final offsetY = sin((_controller.value + delay) * 2 * pi) * 5;
-                  final scale = 1 + sin((_controller.value + delay) * 2 * pi) * 0.05;
+                  final value =
+                      sin((_floatController.value + delay) * 2 * pi);
+
                   return Transform.translate(
-                    offset: Offset(0, offsetY),
-                    child: Transform.scale(scale: scale, child: child),
+                    offset: Offset(0, value * 6),
+                    child: Transform.scale(
+                      scale: 1 + (value * 0.03),
+                      child: child,
+                    ),
                   );
                 },
                 child: Container(
@@ -329,7 +287,9 @@ class _StaticLabMenuState extends State<StaticLabMenu>
                   child: Icon(icon, color: Colors.white, size: 38),
                 ),
               ),
+
               const SizedBox(height: 18),
+
               Text(
                 title,
                 style: const TextStyle(
@@ -339,9 +299,11 @@ class _StaticLabMenuState extends State<StaticLabMenu>
                   height: 1.3,
                 ),
               ),
+
               const SizedBox(height: 12),
-              Row(
-                children: const [
+
+              const Row(
+                children: [
                   Text(
                     'Buka Eksperimen',
                     style: TextStyle(
@@ -351,7 +313,8 @@ class _StaticLabMenuState extends State<StaticLabMenu>
                     ),
                   ),
                   SizedBox(width: 6),
-                  Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+                  Icon(Icons.arrow_forward_rounded,
+                      color: Colors.white, size: 18),
                 ],
               ),
             ],
@@ -362,13 +325,14 @@ class _StaticLabMenuState extends State<StaticLabMenu>
   }
 }
 
+// ================= BACKGROUND (TETAP) =================
 class _LabMenuBackground extends StatelessWidget {
   const _LabMenuBackground();
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
+    return const DecoratedBox(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [Color(0xFFF7FCFF), Color(0xFFE6F5FF), Color(0xFFDBF1FF)],
           begin: Alignment.topLeft,
@@ -377,10 +341,19 @@ class _LabMenuBackground extends StatelessWidget {
       ),
       child: Stack(
         fit: StackFit.expand,
-        children: const [
-          _MenuOrb(alignment: Alignment(-1.0, -0.85), size: 170, color: Color(0x3353C8F8)),
-          _MenuOrb(alignment: Alignment(1.0, 0.0), size: 220, color: Color(0x224DA8FF)),
-          _MenuOrb(alignment: Alignment(-0.8, 1.0), size: 190, color: Color(0x1F80DEEA)),
+        children: [
+          _MenuOrb(
+              alignment: Alignment(-1.0, -0.85),
+              size: 170,
+              color: Color(0x3353C8F8)),
+          _MenuOrb(
+              alignment: Alignment(1.0, 0.0),
+              size: 220,
+              color: Color(0x224DA8FF)),
+          _MenuOrb(
+              alignment: Alignment(-0.8, 1.0),
+              size: 190,
+              color: Color(0x1F80DEEA)),
         ],
       ),
     );
@@ -412,32 +385,6 @@ class _MenuOrb extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _LabBadge extends StatelessWidget {
-  const _LabBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 82,
-      height: 82,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF7DD3FC), Color(0xFF3B82F6)],
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x264DA8FF),
-            blurRadius: 18,
-            offset: Offset(0, 10),
-          ),
-        ],
-      ),
-      child: const Icon(Icons.bolt_rounded, color: Colors.white, size: 40),
     );
   }
 }
