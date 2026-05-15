@@ -1,0 +1,102 @@
+[
+  {
+    "question": "Muatan listrik positif akan menarik?",
+    "options": [
+      "Muatan positif lain",
+      "Muatan negatif",
+      "Netral",
+      "Semua benar"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "Alat untuk mendeteksi muatan listrik adalah?",
+    "options": [
+      "Voltmeter",
+      "Amperemeter",
+      "Elektroskop",
+      "Dinamo"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "Satuan muatan listrik adalah?",
+    "options": [
+      "Ampere",
+      "Volt",
+      "Ohm",
+      "Coulomb"
+    ],
+    "answer": 3
+  },
+  {
+    "question": "Muatan sejenis akan?",
+    "options": [
+      "Tarik menarik",
+      "Tolak menolak",
+      "Netral",
+      "Diam"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "Petir merupakan contoh?",
+    "options": [
+      "Listrik dinamis",
+      "Listrik statis",
+      "Magnet",
+      "Induksi panas"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "Hukum Coulomb membahas?",
+    "options": [
+      "Arus listrik",
+      "Hambatan",
+      "Gaya antar muatan",
+      "Tegangan"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "Elektron bermuatan?",
+    "options": [
+      "Positif",
+      "Negatif",
+      "Netral",
+      "Ganda"
+    ],
+    "answer": 1
+  },
+  {
+    "question": "Proton bermuatan?",
+    "options": [
+      "Positif",
+      "Negatif",
+      "Netral",
+      "Tidak bermuatan"
+    ],
+    "answer": 0
+  },
+  {
+    "question": "Kertas dapat tertarik penggaris karena?",
+    "options": [
+      "Panas",
+      "Magnet",
+      "Listrik statis",
+      "Air"
+    ],
+    "answer": 2
+  },
+  {
+    "question": "Medan listrik digambarkan dengan?",
+    "options": [
+      "Garis gaya",
+      "Gelombang",
+      "Lingkaran",
+      "Bayangan"
+    ],
+    "answer": 0
+  }
+]

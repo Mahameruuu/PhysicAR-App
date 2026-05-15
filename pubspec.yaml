@@ -21,10 +21,13 @@ dependencies:
   camera: ^0.10.5+9
   vector_math: ^2.1.4
   font_awesome_flutter: ^10.10.0
+  google_fonts: ^6.3.1
   cupertino_icons: ^1.0.8
+  crypto: ^3.0.6
   http: ^1.2.0
   shared_preferences: ^2.1.1
   intl: ^0.18.1
+  audioplayers: ^6.1.0
 
   # Versi yang tersedia untuk plugin AR (arcore_flutter_plugin)
   arcore_flutter_plugin: ^0.1.0
@@ -41,3 +44,5 @@ flutter:
   assets:
     - assets/images/
     - assets/models/
+    - assets/data/
+    - assets/sounds/

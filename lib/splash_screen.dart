@@ -1,22 +1,47 @@
-import 'package:flutter/material.dart';
-import 'screens/auth/login_screen.dart';
 import 'dart:async';
 
+import 'package:flutter/material.dart';
+
+import 'screens/auth/home_screen.dart';
+import 'screens/auth/login_screen.dart';
+import 'services/auth_service.dart';
+
 class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
   @override
-  _SplashScreenState createState() => _SplashScreenState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 10), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => LoginScreen()),
-      );
-    });
+    _bootstrapApp();
+  }
+
+  Future<void> _bootstrapApp() async {
+    await AuthService.instance.initialize();
+    await Future<void>.delayed(const Duration(seconds: 2));
+
+    if (!mounted) {
+      return;
+    }
+
+    final currentUser = await AuthService.instance.getCurrentUser();
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => currentUser != null
+            ? HomeScreen(userName: currentUser.name)
+            : const LoginScreen(),
+      ),
+    );
   }
 
   @override
