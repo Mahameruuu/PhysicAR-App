@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'home_screen.dart';
 import 'register_screen.dart';
+import 'welcome_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -27,10 +28,10 @@ class _LoginScreenState extends State<LoginScreen> {
     {
       "email": "tes@gmail.com",
       "password": "123456",
-      "name": "Admin PhysicAR",
+      "name": "Admin PhysicLab",
     },
     {
-      "email": "user@physicar.com",
+      "email": "user@physiclab.com",
       "password": "123456",
       "name": "Student Lab",
     },
@@ -73,8 +74,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (_) => HomeScreen(userName: name),
+          PageRouteBuilder(
+            pageBuilder: (_, animation, __) =>
+                WelcomeScreen(userName: name),
+            transitionsBuilder: (_, animation, __, child) {
+              return FadeTransition(
+                opacity: animation,
+                child: child,
+              );
+            },
+            transitionDuration: const Duration(milliseconds: 600),
           ),
         );
       } else {
@@ -87,14 +96,6 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() => _isLoading = false);
       }
     }
-  }
-
-  Future<void> loginWithGoogle() async {
-    Fluttertoast.showToast(
-      msg: 'Login Google tidak tersedia pada mode lokal.',
-      backgroundColor: Colors.black87,
-      textColor: Colors.white,
-    );
   }
 
   @override
@@ -136,7 +137,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       const SizedBox(height: 8),
                       const Hero(
-                        tag: 'physicar-auth-logo',
+                        tag: 'physiclab-auth-logo',
                         child: _BrandCluster(),
                       ),
                       SizedBox(height: size.height * 0.06),
@@ -291,11 +292,6 @@ class _LoginScreenState extends State<LoginScreen> {
                               label: 'Login',
                               isLoading: _isLoading,
                               onPressed: login,
-                            ),
-                            const SizedBox(height: 16),
-                            _GoogleGlassButton(
-                              isLoading: _isLoading,
-                              onPressed: loginWithGoogle,
                             ),
                           ],
                         ),
@@ -540,7 +536,7 @@ class _BrandCluster extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'physicAR',
+                'PhysicLab',
                 style: GoogleFonts.orbitron(
                   color: Colors.white,
                   fontSize: 28,
@@ -870,46 +866,6 @@ class _GradientActionButtonState extends State<_GradientActionButton> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GoogleGlassButton extends StatelessWidget {
-  const _GoogleGlassButton({
-    required this.isLoading,
-    required this.onPressed,
-  });
-
-  final bool isLoading;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 58,
-      child: OutlinedButton.icon(
-        onPressed: isLoading ? null : onPressed,
-        style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.white.withValues(alpha: 0.05),
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-        ),
-        icon: Image.asset(
-          'assets/images/google.png',
-          height: 20,
-          width: 20,
-        ),
-        label: Text(
-          'Login with Google',
-          style: GoogleFonts.poppins(
-            color: Colors.white,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
         ),
       ),
     );

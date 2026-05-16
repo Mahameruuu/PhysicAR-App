@@ -125,7 +125,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   children: [
                     const SizedBox(height: 8),
                     const Hero(
-                      tag: 'physicar-auth-logo',
+                      tag: 'PhysicLab-auth-logo',
                       child: _BrandCluster(),
                     ),
                     SizedBox(height: size.height * 0.05),
@@ -476,7 +476,7 @@ class _BrandCluster extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'physicAR',
+                'PhysicLab',
                 style: GoogleFonts.orbitron(
                   color: Colors.white,
                   fontSize: 28,

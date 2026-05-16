@@ -121,7 +121,7 @@ class _StaticLabMenuState extends State<StaticLabMenu>
                       icon: Icons.battery_charging_full,
                       color1: Colors.greenAccent,
                       color2: Colors.green,
-                      page: const ExperimenCanvas(target: null),
+                      page: ExperimenCanvasParalel(target: null),
                       delay: 0.4,
                     ),
                   ],
