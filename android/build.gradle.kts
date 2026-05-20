@@ -3,6 +3,14 @@ allprojects {
         google()
         mavenCentral()
     }
+
+    // ← TAMBAHKAN INI: force semua subproject pakai Kotlin 1.9.24
+    configurations.all {
+        resolutionStrategy {
+            force("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24")
+            force("org.jetbrains.kotlin:kotlin-stdlib:1.9.24")
+        }
+    }
 }
 
 val newBuildDir: Directory =

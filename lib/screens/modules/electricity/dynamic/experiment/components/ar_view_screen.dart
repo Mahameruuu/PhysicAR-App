@@ -1,115 +1,188 @@
-import 'dart:async';
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:arcore_flutter_plugin/arcore_flutter_plugin.dart';
-import 'package:vector_math/vector_math_64.dart' as vm;
+import 'package:model_viewer_plus/model_viewer_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class ARViewScreen extends StatefulWidget {
-  final Stream<Map<String, dynamic>> arStateStream;
-
-  const ARViewScreen({super.key, required this.arStateStream});
+  const ARViewScreen({super.key});
 
   @override
   State<ARViewScreen> createState() => _ARViewScreenState();
 }
 
-class _ARViewScreenState extends State<ARViewScreen> {
-  final Map<String, ArCoreNode> _arNodes = {};
-  ArCoreController? _arCoreController;
-  StreamSubscription<Map<String, dynamic>>? _sub;
+class _ARViewScreenState extends State<ARViewScreen>
+    with WidgetsBindingObserver {
+  CameraController? _cameraController;
+  bool _cameraReady = false;
+  bool _loading = true;
+  String? _errorMessage;
+
+  static const String _modelPath = 'assets/models/rangkaian_listrik.glb';
 
   @override
   void initState() {
     super.initState();
-    _sub = widget.arStateStream.listen(_syncAr);
+    WidgetsBinding.instance.addObserver(this);
+    _initCamera();
   }
 
-  void _onARViewCreated(ArCoreController controller) {
-    _arCoreController = controller;
+  Future<void> _initCamera() async {
+    try {
+      final permission = await Permission.camera.request();
+      if (!mounted) return;
 
-    controller.onPlaneDetected = (plane) {
-      debugPrint("Plane detected: ${plane.toString()}");
-    };
-  }
-
-  Future<void> _syncAr(Map<String, dynamic> state) async {
-    if (_arCoreController == null) return;
-
-    final comps = Map<String, dynamic>.from(state['components'] ?? {});
-    final nodes = Map<String, dynamic>.from(state['nodes'] ?? {});
-
-    // Hapus node yang tidak ada di state baru
-    final toRemove = _arNodes.keys.where((id) => !comps.containsKey(id)).toList();
-    for (final id in toRemove) {
-      final node = _arNodes.remove(id);
-      if (node != null) {
-        await _arCoreController?.removeNode(nodeName: node.name);
+      if (!permission.isGranted) {
+        setState(() {
+          _loading = false;
+          _errorMessage =
+              'Izin kamera ditolak. Aktifkan izin kamera di pengaturan.';
+        });
+        return;
       }
+
+      final cameras = await availableCameras();
+      if (cameras.isEmpty) {
+        setState(() {
+          _loading = false;
+          _errorMessage = 'Tidak ada kamera yang tersedia.';
+        });
+        return;
+      }
+
+      final backCamera = cameras.firstWhere(
+        (camera) => camera.lensDirection == CameraLensDirection.back,
+        orElse: () => cameras.first,
+      );
+
+      final controller = CameraController(
+        backCamera,
+        ResolutionPreset.high,
+        enableAudio: false,
+      );
+
+      await controller.initialize();
+
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
+
+      setState(() {
+        _cameraController = controller;
+        _cameraReady = true;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _errorMessage = 'Gagal membuka kamera: $e';
+      });
     }
+  }
 
-    // Tambah atau update node
-    for (final entry in comps.entries) {
-      final id = entry.key;
-      final comp = Map<String, dynamic>.from(entry.value);
-      final start = nodes[comp['start']];
-      final end = nodes[comp['end']];
-      if (start == null || end == null) continue;
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    final controller = _cameraController;
+    if (controller == null) return;
 
-      final avgX = ((start['x'] as num) + (end['x'] as num)) / 2.0;
-      final avgY = ((start['y'] as num) + (end['y'] as num)) / 2.0;
-
-      final position = vm.Vector3(avgX / 100.0, 0.0, avgY / 100.0);
-
-      final isWorking = comp['isWorking'] == true;
-      final color = isWorking ? Colors.yellow : Colors.grey;
-
-      if (!_arNodes.containsKey(id)) {
-        final material = ArCoreMaterial(color: color);
-        final sphere = ArCoreSphere(materials: [material], radius: 0.05);
-
-        final node = ArCoreNode(
-          name: id,
-          shape: sphere,
-          position: position,
-        );
-
-        await _arCoreController?.addArCoreNode(node);
-        _arNodes[id] = node;
-      } else {
-        // Karena arcore_flutter_plugin belum dukung updateNode langsung,
-        // kita hapus dan tambahkan ulang node-nya.
-        final node = _arNodes[id]!;
-        await _arCoreController?.removeNode(nodeName: node.name);
-
-        final updatedNode = ArCoreNode(
-          name: id,
-          shape: ArCoreSphere(
-            materials: [ArCoreMaterial(color: color)],
-            radius: 0.05,
-          ),
-          position: position,
-        );
-
-        await _arCoreController?.addArCoreNode(updatedNode);
-        _arNodes[id] = updatedNode;
-      }
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      await controller.dispose();
+      if (!mounted) return;
+      setState(() {
+        _cameraController = null;
+        _cameraReady = false;
+      });
+    } else if (state == AppLifecycleState.resumed) {
+      await _initCamera();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("AR View")),
-      body: ArCoreView(
-        onArCoreViewCreated: _onARViewCreated,
-        enableTapRecognizer: true,
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: const Text('AR GLB View'),
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
       ),
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_loading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            _errorMessage!,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+    }
+
+    if (!_cameraReady || _cameraController == null) {
+      return const Center(
+        child: Text('Kamera belum siap', style: TextStyle(color: Colors.white)),
+      );
+    }
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        CameraPreview(_cameraController!),
+
+        Positioned.fill(
+          child: IgnorePointer(
+            ignoring: false,
+            child: ModelViewer(
+              src: _modelPath,
+              alt: 'Model AR',
+              ar: false,
+              autoRotate: true,
+              cameraControls: true,
+              disableZoom: false,
+              backgroundColor: Colors.transparent,
+            ),
+          ),
+        ),
+
+        Positioned(
+          left: 16,
+          right: 16,
+          bottom: 20,
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.black54,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              'Model GLB ditampilkan di atas kamera. Ini overlay 3D cepat, belum marker tracking.',
+              style: TextStyle(color: Colors.white, fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
   @override
   void dispose() {
-    _sub?.cancel();
-    _arCoreController?.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    _cameraController?.dispose();
     super.dispose();
   }
 }

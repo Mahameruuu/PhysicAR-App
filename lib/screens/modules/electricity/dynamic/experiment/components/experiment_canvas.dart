@@ -51,33 +51,41 @@ class _ExperimentCanvasState extends State<ExperimentCanvas> {
   final Map<String, CircuitNode> _nodes = {};
   final Map<String, CircuitComponent> _components = {};
 
-  // Stream untuk dikirim ke AR
   final StreamController<Map<String, dynamic>> _arStateStream =
       StreamController<Map<String, dynamic>>.broadcast();
 
   void _updateCurrentFlow() {
-    // Contoh logika sederhana untuk menyalakan komponen
-    for (var comp in _components.values) {
+    for (final comp in _components.values) {
       comp.isWorking = comp.isConnected;
     }
 
-    _pushStateToAr(); // kirim update ke AR
+    _pushStateToAr();
   }
 
   void _pushStateToAr() {
     final payload = {
-      'nodes': _nodes.map((k, v) => MapEntry(k, {
+      'nodes': _nodes.map(
+        (k, v) => MapEntry(
+          k,
+          {
             'x': v.position.dx,
             'y': v.position.dy,
             'currentFlow': v.currentFlow,
-          })),
-      'components': _components.map((k, v) => MapEntry(k, {
+          },
+        ),
+      ),
+      'components': _components.map(
+        (k, v) => MapEntry(
+          k,
+          {
             'type': v.type.toString(),
             'start': v.startNodeId,
             'end': v.endNodeId,
             'isConnected': v.isConnected,
             'isWorking': v.isWorking,
-          })),
+          },
+        ),
+      ),
     };
 
     _arStateStream.add(payload);
@@ -87,15 +95,23 @@ class _ExperimentCanvasState extends State<ExperimentCanvas> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ARViewScreen(arStateStream: _arStateStream.stream),
+        builder: (context) => const ARViewScreen(),
       ),
     );
   }
 
   @override
+  void dispose() {
+    _arStateStream.close();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Experiment Canvas')),
+      appBar: AppBar(
+        title: const Text('Experiment Canvas'),
+      ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

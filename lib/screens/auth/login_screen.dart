@@ -807,21 +807,25 @@ class _GradientActionButtonState extends State<_GradientActionButton> {
 
   @override
   Widget build(BuildContext context) {
-    final disabled = widget.isLoading;
-
     return GestureDetector(
-      onTapDown: disabled ? null : (_) => setState(() => _pressed = true),
-      onTapUp: disabled ? null : (_) => setState(() => _pressed = false),
-      onTapCancel: disabled ? null : () => setState(() => _pressed = false),
+      behavior: HitTestBehavior.opaque,
+      onTapDown: widget.isLoading ? null : (_) => setState(() => _pressed = true),
+      onTapUp: widget.isLoading
+          ? null
+          : (_) {
+              setState(() => _pressed = false);
+              widget.onPressed();
+            },
+      onTapCancel: widget.isLoading ? null : () => setState(() => _pressed = false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 140),
         curve: Curves.easeOut,
-        transform: Matrix4.identity()..scale(_pressed ? 0.98 : 1),
+        transform: Matrix4.identity()..scale(_pressed ? 0.98 : 1.0),
         height: 60,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(22),
           gradient: LinearGradient(
-            colors: disabled
+            colors: widget.isLoading
                 ? const [Color(0xFF475569), Color(0xFF334155)]
                 : const [
                     Color(0xFF3B82F6),
@@ -829,7 +833,7 @@ class _GradientActionButtonState extends State<_GradientActionButton> {
                     Color(0xFF06B6D4),
                   ],
           ),
-          boxShadow: disabled
+          boxShadow: widget.isLoading
               ? null
               : const [
                   BoxShadow(
@@ -839,16 +843,7 @@ class _GradientActionButtonState extends State<_GradientActionButton> {
                   ),
                 ],
         ),
-        child: ElevatedButton(
-          onPressed: disabled ? null : widget.onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            disabledBackgroundColor: Colors.transparent,
-            shadowColor: Colors.transparent,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(22),
-            ),
-          ),
+        child: Center(
           child: widget.isLoading
               ? const SizedBox(
                   width: 22,
@@ -864,6 +859,7 @@ class _GradientActionButtonState extends State<_GradientActionButton> {
                     color: Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
+                    letterSpacing: 0.3,
                   ),
                 ),
         ),
