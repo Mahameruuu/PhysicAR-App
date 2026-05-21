@@ -3,21 +3,21 @@ import 'package:flutter/material.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-class ARViewScreen extends StatefulWidget {
-  const ARViewScreen({super.key});
+class ARViewerSeri extends StatefulWidget {
+  const ARViewerSeri({super.key});
 
   @override
-  State<ARViewScreen> createState() => _ARViewScreenState();
+  State<ARViewerSeri> createState() => _ARViewerSeriState();
 }
 
-class _ARViewScreenState extends State<ARViewScreen>
+class _ARViewerSeriState extends State<ARViewerSeri>
     with WidgetsBindingObserver {
   CameraController? _cameraController;
   bool _cameraReady = false;
   bool _loading = true;
   String? _errorMessage;
 
-  static const String _modelPath = 'assets/models/circuit_paralel.glb';
+  static const String _modelPath = 'assets/models/electric_circuit.glb';
 
   @override
   void initState() {

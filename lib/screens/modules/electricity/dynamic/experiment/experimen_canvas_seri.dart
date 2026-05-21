@@ -4,6 +4,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'components/ar_view_seri.dart';
+import 'package:flutter/foundation.dart';
 
 // ============================================================
 //  MODEL & ENUM
@@ -1103,19 +1105,42 @@ class _ExperimentCanvasState extends State<ExperimenCanvasSeri>
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            borderRadius: BorderRadius.circular(14),
-            onTap: () {},
+            borderRadius: BorderRadius.circular(16),
+            onTap: () {
+              if (kIsWeb) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Mode AR belum tersedia di Flutter Web.'),
+                  ),
+                );
+                return;
+              }
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ARViewerSeri(),
+                ),
+              );
+            },
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.view_in_ar_rounded,
-                    color: Colors.white, size: 22),
+                const Icon(
+                  Icons.view_in_ar_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
                 const SizedBox(width: 10),
-                Text('Lihat dalam AR',
-                    style: GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600)),
+                Text(
+                  'Lihat dalam AR',
+                  style: GoogleFonts.rajdhani(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
+                ),
               ],
             ),
           ),
